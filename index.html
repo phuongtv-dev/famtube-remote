@@ -435,7 +435,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261124132505';
+const PAGE_BUILD = '20261124133332';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -979,10 +979,23 @@ function renderTv() {
       <div class="field" style="margin-bottom:6px">Khóa tivi ngay</div>
       <div class="chips">${[15, 30, 60, 120].map((m) => `<button data-tv="lock" data-min="${m}">🔒 ${m < 60 ? m + ' phút' : m / 60 + ' giờ'}</button>`).join('')}</div>
     </div>`}
-    ${hist.length ? `<details><summary>Đã xem gần đây (${hist.length})</summary><div class="list hist">${hist.map((h) =>
-      `<div class="item"><span class="sub" style="min-width:42px">${fmtClock(h.at)}</span><div class="label">${esc(h.title)}<div class="sub">${esc(h.channel || '')}</div></div>${h.channel ? (isBlocked(h.channel) ? '<span class="badge warn">Đã chặn</span>' : `<button class="pill" data-block-title="${esc(h.channel)}">Chặn kênh</button>`) : ''}</div>`).join('')}</div></details>` : ''}
+    ${hist.length ? `<details id="histBox"${histOpen ? ' open' : ''}><summary>Đã xem gần đây (${hist.length})</summary><div class="checks hist">${hist.map((h) =>
+      `<label><input type="checkbox" data-hist-ch="${esc(h.channel || '')}" ${!h.channel || isBlocked(h.channel) ? 'disabled' : ''} ${isBlocked(h.channel) ? 'checked' : ''}>
+        <span class="grow">${esc(h.title)}<span class="sub" style="display:block">${fmtClock(h.at)} · ${esc(h.channel || 'chưa rõ kênh')}${isBlocked(h.channel) ? ' · <b style="color:var(--danger)">đã chặn</b>' : ''}</span></span></label>`).join('')}</div>
+      <button id="histBlock" class="danger block" style="display:none; margin-top:8px"></button></details>` : ''}
   </div>`;
 }
+let histOpen = false;   // giữ mục "Đã xem gần đây" đang mở khi trang tự làm mới
+function histPicked() {
+  return [...new Set([...$('tvCard').querySelectorAll('input[data-hist-ch]:checked:not(:disabled)')].map((x) => x.dataset.histCh))];
+}
+$('tvCard').addEventListener('toggle', (e) => { if (e.target.id === 'histBox') histOpen = e.target.open; }, true);
+$('tvCard').addEventListener('change', (e) => {
+  if (!e.target.dataset || e.target.dataset.histCh === undefined) return;
+  const n = histPicked().length;
+  $('histBlock').style.display = n ? '' : 'none';
+  $('histBlock').textContent = `Chặn ${n} kênh đã chọn`;
+});
 async function tvCommand(body, reload = true) {
   try {
     const r = await api('POST', '/api/tv', body);
@@ -991,6 +1004,11 @@ async function tvCommand(body, reload = true) {
   } catch (e) { toast(e.message, true); }
 }
 $('tvCard').addEventListener('click', (e) => {
+  if (e.target.id === 'histBlock') {
+    const add = histPicked().filter((t) => !isBlocked(t)).map((title) => ({ id: '', title }));
+    if (add.length) saveBlocked([...(cfg.blockedChannels || []), ...add], `Đã chặn ${add.length} kênh`);
+    return;
+  }
   const blk = e.target.closest('[data-block-title]');
   if (blk) { e.preventDefault(); return blockChannel('', blk.dataset.blockTitle); }
   const b = e.target.closest('button[data-tv]');
@@ -1470,6 +1488,7 @@ function startAutoRefresh() {
     if (!$('tab-today').classList.contains('active')) return;
     const st = await readState(10 * 60000);
     if (!st || st.publishedAt === cfg.publishedAt) return;
+    if (histPicked().length) return;   // đang tích chọn kênh để chặn: đừng vẽ lại làm mất lựa chọn
     cfg = st;
     store(CONFIG_CACHE_STORE, JSON.stringify(cfg));
     renderToday();
