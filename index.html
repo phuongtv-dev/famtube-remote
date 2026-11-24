@@ -489,7 +489,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261124140827';
+const PAGE_BUILD = '20261124194222';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -932,7 +932,9 @@ function renderToday() {
   const items = (cfg.profiles || []).filter((p) => p.kind === 'kid').map((p) => ({
     id: String(p.id), name: p.name, color: p.color, avatarUrl: p.avatarUrl,
     limit: weekend ? p.weekendLimitMin : p.dailyLimitMin, start: p.windowStart, end: p.windowEnd }));
-  if (g.allowDirect || u['0']) items.push({ id: '0', name: 'YouTube mở trực tiếp', color: '#E8EBFE', icon: '▶',
+  // Ngăn "xem chung": chỉ dùng khi tắt "Ai đang xem?" (mở YouTube trực tiếp không biết con nào xem).
+  const askWho = !cfg.extras || cfg.extras.askWhoWatches !== false;
+  if (!askWho && (g.allowDirect || u['0'])) items.push({ id: '0', name: 'Xem chung (không chọn con)', color: '#E8EBFE', icon: '▶',
     limit: weekend ? g.directWeekendMin : g.directDailyMin, start: g.directWindowStart, end: g.directWindowEnd });
   $('todayKids').innerHTML = items.length ? items.map((it) => {
     const used = u[it.id] || 0;
