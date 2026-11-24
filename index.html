@@ -466,8 +466,10 @@ async function remoteApi(method, path, body) {
   const req = { method, path, body: body === undefined ? null : JSON.stringify(body), at: Date.now() };
   await gh('PUT', `contents/req/${id}`, { message: `điện thoại: ${method} ${path}`, content: toB64(JSON.stringify(req)) });
   const until = Date.now() + 45000;
+  let wait = 1200;
   while (Date.now() < until) {
-    await sleep(1500);
+    await sleep(wait);
+    wait = 900;
     const f = await gh('GET', `contents/res/${id}`);
     if (!f) continue;
     const text = f.content ? fromB64(f.content) : await gh('GET', `contents/res/${id}`, undefined, true);
@@ -476,6 +478,7 @@ async function remoteApi(method, path, body) {
     let data = {};
     try { data = JSON.parse(r.body || '{}'); } catch {}
     if (r.status >= 400) throw new Error(data.error || ('Lỗi ' + r.status));
+    if (r.config) { try { freshConfig = { at: Date.now(), data: JSON.parse(r.config) }; } catch {} }
     return data;
   }
   // Tivi không nhận: rút lệnh lại để lúc bật tivi không chạy lệnh cũ.
@@ -549,9 +552,29 @@ const norm = (x) => JSON.stringify(x, (k, v) => Array.isArray(v) && v.every((e) 
 const sameAs = (a, b) => norm(a) === norm(b);
 function setDirty(v) { dirty = v && !sameAs(groups, cfg.groups); updateSaveBar(); }
 
+let freshConfig = null;   // cấu hình tivi gửi kèm câu trả lời lệnh ghi gần nhất
+/** Bản cấu hình tivi đăng sẵn ở state/config.json (trang online). null nếu chưa có hoặc quá cũ. */
+async function readState(maxAgeMs) {
+  try {
+    const t = await gh('GET', 'contents/state/config.json', undefined, true);
+    if (!t) return null;
+    const c = JSON.parse(t);
+    return Date.now() - (c.publishedAt || 0) <= maxAgeMs ? c : null;
+  } catch { return null; }
+}
+async function fetchConfig() {
+  if (REMOTE) {
+    if (freshConfig && Date.now() - freshConfig.at < 10000) { const c = freshConfig.data; freshConfig = null; return c; }
+    // Tivi đăng lại mỗi 15 giây khi có thay đổi: bản trong 10 phút vẫn dùng ngay được.
+    const st = await readState(10 * 60000);
+    if (st) return st;
+  }
+  return api('GET', '/api/config');
+}
 async function load() {
   try {
-    cfg = await api('GET', '/api/config');
+    cfg = await fetchConfig();
+    if (REMOTE) store(CONFIG_CACHE_STORE, JSON.stringify(cfg));
     groups = cfg.groups.map((g) => ({ ...g, channelIds: [...g.channelIds] }));
     profiles = (cfg.profiles || []).map((p) => ({ ...p, groupIds: [...p.groupIds] }));
     setDirty(false);
@@ -1216,6 +1239,29 @@ $('restoreBtn').addEventListener('click', async () => {
   inp.click();
 });
 
+// Trạng thái kết nối theo lần tivi đăng trạng thái gần nhất (tivi bật thì đăng lại ít nhất mỗi khi có đổi).
+function showConn(at) {
+  const age = Date.now() - (at || 0);
+  if (age < 3 * 60000) setConn('on', 'Tivi đang bật');
+  else setConn('', 'Cập nhật ' + new Date(at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
+}
+// Trang online: tab Hôm nay tự làm mới mỗi 15 giây (đọc bản tivi đăng sẵn, không gửi lệnh).
+let autoTimer = null;
+function startAutoRefresh() {
+  if (!REMOTE || autoTimer) return;
+  autoTimer = setInterval(async () => {
+    if (document.hidden || busyCount > 0 || dirty || profilesDirty) return;
+    if (!$('tab-today').classList.contains('active')) return;
+    const st = await readState(10 * 60000);
+    if (!st || st.publishedAt === cfg.publishedAt) return;
+    cfg = st;
+    store(CONFIG_CACHE_STORE, JSON.stringify(cfg));
+    renderToday();
+    showConn(st.publishedAt);
+  }, 15000);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && REMOTE && store(REMOTE_TOKEN_STORE)) load(); });
+
 // Trang online: hiện ngay cấu hình lần trước (lưu trong máy) trong lúc chờ tivi trả lời.
 function applyConfig(c) {
   cfg = c;
@@ -1280,12 +1326,15 @@ async function start() {
   }
   const cached = store(CONFIG_CACHE_STORE);
   if (cached) { try { applyConfig(JSON.parse(cached)); } catch {} }
-  setConn('', 'Đang hỏi tivi…');
+  setConn('', 'Đang tải…');
   try {
-    const c = await api('GET', '/api/config');
+    let c = await readState(10 * 60000);
+    const viaState = !!c;
+    if (!c) { setConn('', 'Đang hỏi tivi…'); c = await api('GET', '/api/config'); }
     store(CONFIG_CACHE_STORE, JSON.stringify(c));
     applyConfig(c);
-    setConn('on', 'Tivi đang bật');
+    showConn(viaState ? c.publishedAt : Date.now());
+    startAutoRefresh();
   } catch (e) {
     reportError('start', e);
     setConn('off', /không trả lời/.test(e.message) ? 'Tivi đang tắt' : 'Lỗi kết nối');
