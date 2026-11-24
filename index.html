@@ -301,7 +301,7 @@
           <option value="180">3 phút</option>
         </select>
       </label>
-      <div class="note" style="margin-top:6px">YouTube trên tivi không báo video nào là Shorts nên FamTube đoán theo độ dài. Video thường ngắn hơn mức này cũng bị chặn.</div>
+      <div class="note" style="margin-top:6px">FamTube nhận ra Shorts vì YouTube không cho tua Shorts (video thường thì tua được), nên video ngắn bình thường không bị chặn nhầm. Mức độ dài này chỉ dùng dự phòng.</div>
     </div>
     <div class="item" style="display:block">
       <label class="field">Tên gọi con trên màn chặn<input type="text" id="gChildName" maxlength="24" placeholder="vd. Khoa" autocomplete="off"></label>
@@ -435,7 +435,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261124131048';
+const PAGE_BUILD = '20261124132505';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
