@@ -202,7 +202,7 @@
 <header>
   <div class="head-row">
     <h1 id="pageTitle">Hôm nay</h1>
-    <span class="chip" id="remoteState"><span class="dot"></span><span id="remoteStateText">Đang kết nối…</span></span>
+    <button class="chip" id="remoteState" style="cursor:pointer" aria-label="Làm mới"><span class="dot"></span><span id="remoteStateText">Đang kết nối…</span><span style="font-size:14px">↻</span></button>
   </div>
 </header>
 
@@ -1418,17 +1418,34 @@ $('restoreBtn').addEventListener('click', async () => {
 });
 
 // Trạng thái kết nối theo lần tivi đăng trạng thái gần nhất (tivi bật thì đăng lại ít nhất mỗi khi có đổi).
-function showConn(at) {
-  const age = Date.now() - (at || 0);
-  if (age < 3 * 60000) setConn('on', `${(cfg.tvName || 'Tivi').replace(/ \(.*\)$/, '')} · đang bật`);
-  else setConn('', 'Cập nhật ' + new Date(at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
+let aliveAt = 0;   // lần cuối tivi báo "đang bật" (state/alive.json, mỗi 2 phút)
+async function readAlive() {
+  try { const t = await gh('GET', 'contents/state/alive.json', undefined, true); if (t) aliveAt = JSON.parse(t).at || 0; } catch {}
 }
+function showConn(at) {
+  const last = Math.max(at || 0, aliveAt);
+  const name = (cfg.tvName || 'Tivi').replace(/ \(.*\)$/, '');
+  if (Date.now() - last < 4 * 60000) setConn('on', `${name} · đang bật`);
+  else setConn('off', `${name} · tắt từ ${new Date(last).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`);
+}
+// Bấm ô trạng thái: hỏi thẳng tivi lấy dữ liệu mới nhất.
+$('remoteState').addEventListener('click', async () => {
+  if (!REMOTE) { await load(); toast('Đã làm mới'); return; }
+  setConn('', 'Đang hỏi tivi…');
+  try {
+    const c = await api('GET', '/api/config');
+    cfg = c; store(CONFIG_CACHE_STORE, JSON.stringify(c)); applyConfig(c);
+    aliveAt = Date.now(); showConn(Date.now()); toast('Đã cập nhật từ tivi');
+  } catch (e) { await readAlive(); showConn(cfg.publishedAt); toast(e.message, true); }
+});
 // Trang online: tab Hôm nay tự làm mới mỗi 15 giây (đọc bản tivi đăng sẵn, không gửi lệnh).
 let autoTimer = null;
 function startAutoRefresh() {
   if (!REMOTE || autoTimer) return;
+  let ticks = 0;
   autoTimer = setInterval(async () => {
     if (document.hidden || busyCount > 0 || dirty || profilesDirty) return;
+    if (++ticks % 6 === 0) { await readAlive(); showConn(cfg.publishedAt); }
     if (!$('tab-today').classList.contains('active')) return;
     const st = await readState(10 * 60000);
     if (!st || st.publishedAt === cfg.publishedAt) return;
@@ -1521,6 +1538,7 @@ async function start() {
   if (cached) { try { applyConfig(JSON.parse(cached)); } catch {} }
   setConn('', 'Đang tải…');
   try {
+    await readAlive();
     let c = await readState(10 * 60000);
     const viaState = !!c;
     if (!c) { setConn('', 'Đang hỏi tivi…'); c = await api('GET', '/api/config'); }
