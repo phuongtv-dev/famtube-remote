@@ -489,7 +489,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261124195853';
+const PAGE_BUILD = '20261124204159';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -938,15 +938,17 @@ function renderToday() {
     limit: weekend ? g.directWeekendMin : g.directDailyMin, start: g.directWindowStart, end: g.directWindowEnd });
   $('todayKids').innerHTML = items.length ? items.map((it) => {
     const used = u[it.id] || 0;
+    const grant = grants[it.id] || 0;   // phút cho thêm hôm nay (cộng vào giới hạn)
+    if (it.limit > 0) it.limit += grant;
     const left = it.limit > 0 ? Math.max(0, it.limit - used) : null;
-    const grant = Math.ceil((grants[it.id] || 0) / 60);
     const pct = it.limit > 0 ? Math.min(100, Math.round(used / it.limit * 100)) : 0;
-    const over = left === 0 && !grant;
+    const over = left === 0;
     const color = over ? 'var(--danger)' : pct >= 80 ? 'var(--warm)' : 'var(--accent)';
-    const badge = grant ? `<span class="badge info">Đang được thêm · còn ${grant} phút</span>`
-      : it.limit <= 0 ? '<span class="badge">Không giới hạn</span>'
+    const extra = grant ? `<span class="badge info">+${grant} phút thưởng</span> ` : '';
+    const badge = extra + (
+      it.limit <= 0 ? '<span class="badge">Không giới hạn</span>'
       : over ? '<span class="badge warn">Hết giờ hôm nay</span>'
-      : `<span class="badge">Còn ${fmtMin(left)}</span>`;
+      : `<span class="badge">Còn ${fmtMin(left)}</span>`);
     const inner = it.avatarUrl ? `<img src="${esc(it.avatarUrl)}" alt="">` : esc(it.icon || (it.name || '?').trim().charAt(0).toUpperCase());
     const win = it.start && it.end ? ` · xem từ ${esc(it.start)} đến ${esc(it.end)}` : '';
     return `<div class="card" data-bucket="${it.id}">
