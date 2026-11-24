@@ -369,6 +369,17 @@
     </details>
   </div>
 
+  <div class="section-title">Thông báo trên điện thoại</div>
+  <div class="card stack">
+    <div class="stat"><div class="ico">🔔</div><div class="grow"><div class="card-title">Nhận tin từ tivi</div>
+      <div class="sub">Khi tivi xin phép, con hết giờ hoặc bị khóa. Bố và mẹ cùng nhận được.</div></div></div>
+    <div class="note">1. Cài app <b>ntfy</b> (App Store / Google Play, miễn phí, không cần tài khoản).<br>
+      2. Trong ntfy bấm <b>+</b>, nhập chủ đề dưới đây (để nguyên máy chủ ntfy.sh) → Subscribe.<br>
+      3. Cho phép ntfy gửi thông báo. Bấm vào thông báo là mở FamTube.</div>
+    <div class="row"><input type="text" id="ntfyTopic" class="grow" readonly><button id="ntfyCopy">Chép</button></div>
+    <button id="ntfyTest">Gửi thông báo thử</button>
+  </div>
+
   <div class="section-title">Sao lưu</div>
   <div class="card stack">
     <div id="cloudBackup" class="stack" style="display:none">
@@ -1324,10 +1335,19 @@ function renderRemote() {
   $('remoteTokenRow').style.display = REMOTE ? 'none' : '';
   if (cfg.remotePage && !REMOTE) { $('remoteLink').href = cfg.remotePage; $('remoteLink').textContent = 'Mở trang online ›'; }
   $('cloudBackup').style.display = cfg.remoteEnabled ? '' : 'none';
+  $('ntfyTopic').value = cfg.ntfyTopic || '';
   $('cloudState').textContent = cfg.lastBackupAt
     ? 'Tự sao lưu lên GitHub khi có thay đổi · lần cuối ' + new Date(cfg.lastBackupAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
     : 'Tự sao lưu lên GitHub khi có thay đổi · chưa có bản nào';
 }
+$('ntfyCopy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('ntfyTopic').value); toast('Đã chép chủ đề'); }
+  catch { $('ntfyTopic').select(); toast('Giữ vào ô để chép', true); }
+});
+$('ntfyTest').addEventListener('click', async () => {
+  try { await api('PUT', '/api/settings', { testNotify: true }); toast('Đã gửi, xem trên điện thoại'); }
+  catch (e) { toast(e.message, true); }
+});
 $('cloudBackupBtn').addEventListener('click', async () => {
   try { await api('PUT', '/api/settings', { backupNow: true }); toast('Đã sao lưu lên GitHub'); await load(); }
   catch (e) { toast(e.message, true); }
