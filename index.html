@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="FamTube">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#F4F4F9">
+<meta name="theme-color" content="#EEF0FB">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="color-scheme" content="light">
@@ -26,16 +26,26 @@
   button, a, label, summary { touch-action:manipulation; -webkit-user-select:none; user-select:none; }
   body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;
          padding:0 16px calc(var(--tabbar) + 90px + env(safe-area-inset-bottom)); }
+  /* ---------- Kính mờ (glass): nền gradient + thẻ trong suốt làm mờ phía sau ---------- */
+  html { background:#EEF0FB; }
+  body { background:transparent; }
+  body::before { content:""; position:fixed; inset:-20%; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(40% 35% at 15% 10%, rgba(39,65,241,.55), transparent 70%),
+      radial-gradient(35% 30% at 90% 20%, rgba(216,134,137,.60), transparent 70%),
+      radial-gradient(45% 40% at 70% 85%, rgba(140,120,243,.55), transparent 70%),
+      radial-gradient(40% 35% at 10% 80%, rgba(80,200,220,.40), transparent 70%),
+      #EEF0FB; }
   /* iPhone tự phóng to khi chạm ô nhập có chữ nhỏ hơn 16px: giữ mọi ô nhập ở 16px. */
   input, select, textarea { font-size:16px !important; }
 
   /* ---------- Đầu trang ---------- */
   header { position:sticky; top:0; z-index:20; margin:0 -16px; padding:max(14px,env(safe-area-inset-top)) 16px 12px;
-           background:rgba(244,244,249,.92); -webkit-backdrop-filter:saturate(1.6) blur(16px); backdrop-filter:saturate(1.6) blur(16px); }
+           background:rgba(238,240,251,.55); -webkit-backdrop-filter:saturate(1.6) blur(16px); backdrop-filter:saturate(1.6) blur(16px); }
   .head-row { display:flex; align-items:center; gap:10px; }
   header h1 { font:700 26px/1.15 -apple-system,system-ui,sans-serif; letter-spacing:-.02em; margin:0; flex:1; }
   .chip { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 10px; border-radius:999px; font-size:12px; font-weight:600;
-          background:#fff; border:1px solid var(--line2); color:var(--muted); white-space:nowrap; max-width:60vw; overflow:hidden; text-overflow:ellipsis; }
+          background:rgba(255,255,255,.6); border:1px solid rgba(255,255,255,.85); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); color:var(--muted); white-space:nowrap; max-width:60vw; overflow:hidden; text-overflow:ellipsis; }
   .chip .dot { width:8px; height:8px; border-radius:50%; background:#B9B8CC; flex-shrink:0; }
   .chip.on .dot { background:var(--ok); box-shadow:0 0 0 3px var(--ok-soft); }
   .chip.off .dot { background:var(--danger); }
@@ -45,7 +55,9 @@
   .tab.active { display:block; }
   @keyframes fade { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
   .section-title { font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:22px 4px 8px; }
-  .card { background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:12px; box-shadow:0 1px 2px rgba(27,26,61,.04), 0 4px 16px rgba(27,26,61,.04); }
+  .card { background:rgba(255,255,255,.58); border:1px solid rgba(255,255,255,.75); border-radius:var(--radius); padding:16px; margin-bottom:12px;
+          -webkit-backdrop-filter:blur(22px) saturate(1.7); backdrop-filter:blur(22px) saturate(1.7);
+          box-shadow:0 8px 32px rgba(39,45,120,.10), inset 0 1px 0 rgba(255,255,255,.8); }
   .card-title { font-weight:700; font-size:16px; margin:0 0 2px; }
   .sub { color:var(--muted); font-size:13px; }
   .note { font-size:12.5px; color:var(--muted); line-height:1.4; }
@@ -62,20 +74,20 @@
 
   /* ---------- Ô nhập & nút ---------- */
   input[type=text], input[type=number], input[inputmode=numeric], input[type=time], select {
-    font:inherit; height:46px; padding:0 12px; border:1px solid var(--line2); border-radius:12px; background:#FAFAFD; color:var(--ink); width:100%;
+    font:inherit; height:46px; padding:0 12px; border:1px solid rgba(255,255,255,.9); border-radius:12px; background:rgba(255,255,255,.65); color:var(--ink); width:100%;
     -webkit-appearance:none; appearance:none; }
   select { background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
            background-position:calc(100% - 18px) 20px, calc(100% - 13px) 20px; background-size:5px 5px; background-repeat:no-repeat; padding-right:32px; }
   input:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); background:#fff; }
   .field { display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:500; color:var(--muted); }
   button { font:inherit; font-size:15px; font-weight:600; height:44px; padding:0 16px; border-radius:12px; border:0;
-           background:var(--accent-soft); color:var(--accent); cursor:pointer; transition:transform .08s, opacity .15s; }
+           background:rgba(39,65,241,.10); color:var(--accent); cursor:pointer; transition:transform .08s, opacity .15s; }
   button:active { transform:scale(.97); }
-  button.primary { background:var(--accent); color:#fff; }
+  button.primary { background:linear-gradient(135deg,#3B55FF,#2741F1 60%,#5B3FE8); color:#fff; box-shadow:0 4px 14px rgba(39,65,241,.35); }
   button.ghost { background:transparent; color:var(--accent); padding:0 4px; height:36px; }
   button.danger { background:var(--warm-soft); color:var(--danger); }
   button.block { width:100%; }
-  button.pill { height:32px; border-radius:999px; font-size:13px; font-weight:600; padding:0 12px; background:#F0F0F6; color:var(--muted); }
+  button.pill { height:32px; border-radius:999px; font-size:13px; font-weight:600; padding:0 12px; background:rgba(27,26,61,.06); color:var(--muted); }
   button.pill[aria-pressed=true] { background:var(--ink); color:#fff; }
   button.pill.lock[aria-pressed=true] { background:var(--warm); color:var(--ink); }
   button.icon { width:36px; height:36px; padding:0; border-radius:10px; background:#F0F0F6; color:var(--ink); }
@@ -90,7 +102,7 @@
   input.switch:checked { background:var(--ok); }
   input.switch:checked::after { transform:translateX(20px); }
 
-  .seg { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; background:#EEEEF5; border-radius:12px; padding:3px; gap:3px; }
+  .seg { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; background:rgba(27,26,61,.06); border-radius:12px; padding:3px; gap:3px; }
   .seg button { height:36px; border-radius:9px; background:transparent; color:var(--muted); font-size:14px; }
   .seg button[aria-pressed=true] { background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(27,26,61,.12); }
 
@@ -106,6 +118,7 @@
   .kid { display:flex; gap:14px; align-items:center; }
   .ring { --p:0; --c:var(--accent); width:64px; height:64px; border-radius:50%; flex-shrink:0; display:grid; place-items:center;
           background:conic-gradient(var(--c) calc(var(--p)*1%), #ECECF4 0); }
+  .ring { background:conic-gradient(var(--c) calc(var(--p)*1%), rgba(27,26,61,.08) 0) !important; }
   .ring > div { width:50px; height:50px; border-radius:50%; background:#fff; display:grid; place-items:center; overflow:hidden;
                 font-weight:700; font-size:18px; }
   .ring > div img { width:100%; height:100%; object-fit:cover; }
@@ -125,7 +138,7 @@
   .ctrl button { height:56px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font-size:11.5px; padding:0; }
   .ctrl button b { font-size:18px; line-height:1; }
   .chips { display:flex; gap:6px; flex-wrap:wrap; }
-  .chips button { height:32px; border-radius:999px; font-size:13px; padding:0 12px; background:#F0F0F6; color:var(--ink); font-weight:500; }
+  .chips button { height:32px; border-radius:999px; font-size:13px; padding:0 12px; background:rgba(255,255,255,.7); color:var(--ink); font-weight:500; }
   .vol { display:flex; align-items:center; gap:10px; }
   .vol button { width:44px; padding:0; font-size:20px; }
   .vol .bar2 { flex:1; height:8px; border-radius:8px; background:#ECECF4; overflow:hidden; }
@@ -165,7 +178,7 @@
   .savebar span { color:#fff; font-size:14px; flex:1; padding-left:8px; }
   .savebar button { height:40px; }
   nav.tabbar { position:fixed; left:0; right:0; bottom:0; z-index:30; display:grid; grid-template-columns:repeat(4,1fr);
-               padding:6px 6px env(safe-area-inset-bottom); background:rgba(255,255,255,.94); border-top:1px solid var(--line);
+               padding:6px 6px env(safe-area-inset-bottom); background:rgba(255,255,255,.55); border-top:1px solid rgba(255,255,255,.8);
                -webkit-backdrop-filter:saturate(1.6) blur(16px); backdrop-filter:saturate(1.6) blur(16px); }
   nav.tabbar button { height:var(--tabbar); background:none; border-radius:12px; display:flex; flex-direction:column; align-items:center;
                       justify-content:center; gap:3px; color:#9A99B2; font-size:11px; font-weight:600; padding:0; }
@@ -530,7 +543,11 @@ function updateSaveBar() {
   $('saveProfiles').style.display = profilesDirty ? '' : 'none';
   $('saveBar').classList.toggle('show', dirty || profilesDirty);
 }
-function setDirty(v) { dirty = v; updateSaveBar(); }
+// "Có thay đổi" = bản nháp khác bản trên tivi (bấm lại đúng lựa chọn cũ, chuyển tab... không tính).
+// Danh sách id (nhóm của profile, kênh của nhóm) so không kể thứ tự.
+const norm = (x) => JSON.stringify(x, (k, v) => Array.isArray(v) && v.every((e) => typeof e !== 'object') ? [...v].sort() : v);
+const sameAs = (a, b) => norm(a) === norm(b);
+function setDirty(v) { dirty = v && !sameAs(groups, cfg.groups); updateSaveBar(); }
 
 async function load() {
   try {
@@ -873,8 +890,8 @@ $('tvCard').addEventListener('click', (e) => {
     case 'sleep':
       if (!confirm('Tắt màn hình tivi? Muốn bật lại phải dùng điều khiển tivi.')) return;
       return tvCommand({ action: 'sleep' }, false);
-    case 'voldown': return tvCommand({ action: 'volume', level: Math.max(0, (tv.volume || 0) - 2) });
-    case 'volup': return tvCommand({ action: 'volume', level: Math.min(tv.volumeMax || 100, (tv.volume || 0) + 2) });
+    case 'voldown': return tvCommand({ action: 'volume', level: Math.max(0, (tv.volume || 0) - Math.max(1, Math.round((tv.volumeMax || 30) / 15))) });
+    case 'volup': return tvCommand({ action: 'volume', level: Math.min(tv.volumeMax || 100, (tv.volume || 0) + Math.max(1, Math.round((tv.volumeMax || 30) / 15))) });
     case 'preset': $('tvMsg').value = b.dataset.text; return tvCommand({ action: 'message', text: b.dataset.text }, false);
     case 'send': {
       const text = $('tvMsg').value.trim();
@@ -972,7 +989,7 @@ $('pinBtn').addEventListener('click', async () => {
 const COLORS = ['#B4A8FC', '#D88689', '#8C78F3', '#E4E6F8', '#2741F1'];
 let profiles = [];
 let profilesDirty = false;
-function setProfilesDirty(v) { profilesDirty = v; updateSaveBar(); }
+function setProfilesDirty(v) { profilesDirty = v && !sameAs(profiles, cfg.profiles || []); updateSaveBar(); }
 
 function avatarHtml(p) {
   return `<div class="avatar" style="background:${esc(p.color)}">${p.avatarUrl ? `<img src="${esc(p.avatarUrl)}" alt="">` : esc((p.name || '?').trim().charAt(0).toUpperCase() || '?')}</div>`;
