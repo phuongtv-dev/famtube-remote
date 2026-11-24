@@ -146,6 +146,9 @@
   .locked-banner { background:var(--warm-soft); color:var(--danger); border-radius:14px; padding:12px 14px; font-weight:600; font-size:14px;
                    display:flex; align-items:center; gap:10px; }
   .hist .item { padding:8px 0; min-height:0; }
+  .approve { background:linear-gradient(135deg,rgba(216,134,137,.35),rgba(255,255,255,.6)); border:1.5px solid rgba(216,134,137,.7);
+             animation:pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow:0 8px 32px rgba(216,134,137,.45); } }
   .stat .ico { width:40px; height:40px; border-radius:12px; display:grid; place-items:center; font-size:20px; background:var(--accent-soft); flex-shrink:0; }
 
   /* ---------- Nội dung ---------- */
@@ -213,6 +216,7 @@
 <main>
 <!-- ===================== HÔM NAY ===================== -->
 <section class="tab active" id="tab-today" data-title="Hôm nay">
+  <div id="approvalCard"></div>
   <div id="tvCard"></div>
   <div class="section-title">Giờ xem hôm nay</div>
   <div id="todayKids"></div>
@@ -778,7 +782,47 @@ function renderGuard() {
 }
 // ================= Hôm nay =================
 function fmtMin(m) { return m >= 60 ? `${Math.floor(m / 60)} giờ${m % 60 ? ' ' + (m % 60) + ' phút' : ''}` : `${m} phút`; }
+function renderApproval() {
+  const a = cfg.approval;
+  if (!a || Date.now() - a.at > 10 * 60000) { $('approvalCard').innerHTML = ''; return; }
+  $('approvalCard').innerHTML = `<div class="card stack approve" style="margin-top:8px">
+    <div class="stat"><div class="ico" style="background:rgba(255,255,255,.7)">📺</div>
+      <div class="grow"><div class="card-title">Tivi đang xin: ${esc(a.title)}</div>
+      <div class="sub">Lúc ${fmtClock(a.at)} · thay cho nhập PIN trên tivi</div></div></div>
+    <div class="grid2"><button data-approve="no">Từ chối</button><button class="primary" data-approve="yes">Cho phép</button></div>
+  </div>`;
+}
+async function sendApproval(id, allow) {
+  try {
+    const r = await api('POST', '/api/approve', { id, allow });
+    toast(r.message || 'Đã gửi');
+    if (cfg.approval && cfg.approval.id === id) cfg.approval = null;
+    renderApproval();
+  } catch (e) { toast(e.message, true); }
+}
+$('approvalCard').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-approve]');
+  if (b && cfg.approval) sendApproval(cfg.approval.id, b.dataset.approve === 'yes');
+});
+// Quét mã QR trên màn PIN của tivi: ...#approve=<id>. Giữ qua lúc nhập token (nếu điện thoại chưa có).
+const APPROVE_STORE = 'famtubePendingApprove';
+(function grabApproveFromHash() {
+  const id = new URLSearchParams(location.hash.slice(1)).get('approve');
+  if (!id) return;
+  try { sessionStorage.setItem(APPROVE_STORE, id); } catch {}
+  history.replaceState(null, '', location.pathname + location.search);
+})();
+async function handleApproveFromQr() {
+  let id = null;
+  try { id = sessionStorage.getItem(APPROVE_STORE); sessionStorage.removeItem(APPROVE_STORE); } catch {}
+  if (!id) return;
+  showTab('today');
+  const title = cfg.approval && cfg.approval.id === id ? `“${cfg.approval.title}”` : 'yêu cầu đang chờ';
+  if (confirm(`Cho phép ${title} trên tivi?`)) await sendApproval(id, true);
+}
+
 function renderToday() {
+  renderApproval();
   renderTv();
   const g = cfg.guard || {};
   const u = cfg.usageToday || {};
@@ -1258,7 +1302,7 @@ function startAutoRefresh() {
     store(CONFIG_CACHE_STORE, JSON.stringify(cfg));
     renderToday();
     showConn(st.publishedAt);
-  }, 15000);
+  }, 5000);
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && REMOTE && store(REMOTE_TOKEN_STORE)) load(); });
 
@@ -1307,6 +1351,7 @@ async function start() {
     setConn('', 'Đang kết nối…');
     await load();
     setConn(cfg.version ? 'on' : 'off', cfg.version ? 'Cùng wifi với tivi' : 'Không kết nối được tivi');
+    handleApproveFromQr();
     return;
   }
   // Link cài đặt sẵn: ...#token=<token> (phần # không gửi lên máy chủ). Giữ nguyên trên thanh địa chỉ:
@@ -1335,6 +1380,7 @@ async function start() {
     applyConfig(c);
     showConn(viaState ? c.publishedAt : Date.now());
     startAutoRefresh();
+    handleApproveFromQr();
   } catch (e) {
     reportError('start', e);
     setConn('off', /không trả lời/.test(e.message) ? 'Tivi đang tắt' : 'Lỗi kết nối');
