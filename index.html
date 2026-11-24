@@ -651,7 +651,7 @@ function render() {
 
   renderRemote();
   renderBlocked();
-  $('ver').textContent = cfg.version ? `FamTube ${cfg.version} · bản dựng ${cfg.build}` : '';
+  $('ver').textContent = cfg.version ? `${cfg.tvName ? cfg.tvName + ' · ' : ''}FamTube ${cfg.version} · bản dựng ${cfg.build}` : '';
   $('minDur').value = String(cfg.minDurationSec);
   if (!$('minDur').value) $('minDur').value = '180';
   $('safeSearch').checked = cfg.safeSearch !== false;
@@ -1400,7 +1400,7 @@ $('restoreBtn').addEventListener('click', async () => {
 // Trạng thái kết nối theo lần tivi đăng trạng thái gần nhất (tivi bật thì đăng lại ít nhất mỗi khi có đổi).
 function showConn(at) {
   const age = Date.now() - (at || 0);
-  if (age < 3 * 60000) setConn('on', `${cfg.tvName || 'Tivi'} · đang bật`);
+  if (age < 3 * 60000) setConn('on', `${(cfg.tvName || 'Tivi').replace(/ \(.*\)$/, '')} · đang bật`);
   else setConn('', 'Cập nhật ' + new Date(at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
 }
 // Trang online: tab Hôm nay tự làm mới mỗi 15 giây (đọc bản tivi đăng sẵn, không gửi lệnh).
@@ -1475,7 +1475,7 @@ async function start() {
   if (!REMOTE) {
     setConn('', 'Đang kết nối…');
     await load();
-    setConn(cfg.version ? 'on' : 'off', cfg.version ? `${cfg.tvName || 'Tivi'} · cùng wifi` : 'Không kết nối được tivi');
+    setConn(cfg.version ? 'on' : 'off', cfg.version ? `${(cfg.tvName || 'Tivi').replace(/ \(.*\)$/, '')} · cùng wifi` : 'Không kết nối được tivi');
     handleApproveFromQr();
     return;
   }
