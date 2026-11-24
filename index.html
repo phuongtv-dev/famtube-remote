@@ -311,9 +311,11 @@
   <div class="card stack">
     <div class="note">Con mở video của kênh bị chặn: tivi báo và tự thoát video. (Video vẫn có thể hiện ở trang gợi ý của YouTube, chỉ không xem được.)</div>
     <input type="text" id="blkSearch" placeholder="Gõ tên kênh (từ 3 ký tự) để tìm…" autocomplete="off" autocapitalize="off">
-    <div id="blkResults"></div>
+    <div id="blkResults" class="checks"></div>
+    <button id="blkApply" class="danger block" style="display:none"></button>
     <div class="field">Đang chặn <span class="note" id="blkCount"></span></div>
-    <div id="blkList" class="list"></div>
+    <div id="blkList" class="checks"></div>
+    <button id="unblkApply" class="block" style="display:none"></button>
   </div>
 
   <div class="section-title">Mở YouTube không qua FamTube</div>
@@ -1021,41 +1023,59 @@ function blockChannel(id, title) {
 function renderBlocked() {
   const list = cfg.blockedChannels || [];
   $('blkCount').textContent = list.length ? `(${list.length} kênh)` : '';
-  $('blkList').innerHTML = list.length ? list.map((c, i) => `<div class="item">
-      <div class="label">🚫 ${esc(c.title)}</div>
-      <button class="pill" data-unblock="${i}">Bỏ chặn</button></div>`).join('')
+  $('blkList').innerHTML = list.length ? list.map((c, i) => `<label>
+      <input type="checkbox" data-unblock="${i}"><span class="grow">🚫 ${esc(c.title)}</span></label>`).join('')
     : '<div class="empty">Chưa chặn kênh nào</div>';
+  updateUnblockBtn();
 }
-$('blkList').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-unblock]');
-  if (!b) return;
-  const list = [...(cfg.blockedChannels || [])];
-  const [c] = list.splice(Number(b.dataset.unblock), 1);
-  saveBlocked(list, `Đã bỏ chặn “${c.title}”`);
+function updateUnblockBtn() {
+  const n = $('blkList').querySelectorAll('input[data-unblock]:checked').length;
+  $('unblkApply').style.display = n ? '' : 'none';
+  $('unblkApply').textContent = `Bỏ chặn ${n} kênh đã chọn`;
+}
+$('blkList').addEventListener('change', updateUnblockBtn);
+$('unblkApply').addEventListener('click', () => {
+  const drop = new Set([...$('blkList').querySelectorAll('input[data-unblock]:checked')].map((x) => Number(x.dataset.unblock)));
+  if (!drop.size) return;
+  const list = (cfg.blockedChannels || []).filter((_, i) => !drop.has(i));
+  saveBlocked(list, `Đã bỏ chặn ${drop.size} kênh`);
 });
 // Gõ từ 3 ký tự thì tự tìm (đợi ngừng gõ 0,8 giây để đỡ tốn lượt tìm).
 let blkTimer = null, blkSeq = 0;
 $('blkSearch').addEventListener('input', () => {
   clearTimeout(blkTimer);
   const q = $('blkSearch').value.trim();
-  if (q.length < 3) { $('blkResults').innerHTML = ''; return; }
+  if (q.length < 3) { $('blkResults').innerHTML = ''; updateBlockBtn(); return; }
   blkTimer = setTimeout(async () => {
     const seq = ++blkSeq;
     $('blkResults').innerHTML = '<div class="empty">Đang tìm…</div>';
     try {
       const r = await api('GET', '/api/search/channels?q=' + encodeURIComponent(q));
       if (seq !== blkSeq) return;
-      $('blkResults').innerHTML = r.channels.length ? r.channels.slice(0, 6).map((c) => `<div class="ch">
-          ${c.thumbnailUrl ? `<img src="${esc(c.thumbnailUrl)}" alt="">` : '<div class="ph"></div>'}
-          <div class="grow"><div class="name">${esc(c.title)}</div><div class="sub">${fmtSubs(c.subscriberCount)} người đăng ký</div></div>
-          <button class="danger" style="height:36px" data-block-id="${esc(c.id)}" data-block-title="${esc(c.title)}" ${isBlocked(c.title) ? 'disabled' : ''}>${isBlocked(c.title) ? 'Đã chặn' : 'Chặn'}</button>
-        </div>`).join('') : '<div class="empty">Không tìm thấy kênh</div>';
+      $('blkResults').innerHTML = r.channels.length ? r.channels.slice(0, 8).map((c) => `<label>
+          <input type="checkbox" data-pick-id="${esc(c.id)}" data-pick-title="${esc(c.title)}" ${isBlocked(c.title) ? 'checked disabled' : ''}>
+          ${c.thumbnailUrl ? `<img src="${esc(c.thumbnailUrl)}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover">` : ''}
+          <span class="grow">${esc(c.title)}<span class="sub" style="display:block">${isBlocked(c.title) ? 'Đã chặn' : fmtSubs(c.subscriberCount) + ' người đăng ký'}</span></span>
+        </label>`).join('') : '<div class="empty">Không tìm thấy kênh</div>';
+      updateBlockBtn();
     } catch (e) { if (seq === blkSeq) $('blkResults').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
   }, 800);
 });
-$('blkResults').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-block-title]');
-  if (b) blockChannel(b.dataset.blockId, b.dataset.blockTitle);
+function pickedChannels() {
+  return [...$('blkResults').querySelectorAll('input[data-pick-title]:checked:not(:disabled)')]
+    .map((x) => ({ id: x.dataset.pickId, title: x.dataset.pickTitle }));
+}
+function updateBlockBtn() {
+  const n = pickedChannels().length;
+  $('blkApply').style.display = n ? '' : 'none';
+  $('blkApply').textContent = `Chặn ${n} kênh đã chọn`;
+}
+$('blkResults').addEventListener('change', updateBlockBtn);
+$('blkApply').addEventListener('click', async () => {
+  const add = pickedChannels().filter((c) => !isBlocked(c.title));
+  if (!add.length) return;
+  await saveBlocked([...(cfg.blockedChannels || []), ...add], `Đã chặn ${add.length} kênh`);
+  $('blkSearch').value = ''; $('blkResults').innerHTML = ''; updateBlockBtn();
 });
 
 // ================= Tab & thanh chọn =================
