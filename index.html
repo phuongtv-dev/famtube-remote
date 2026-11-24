@@ -220,7 +220,9 @@ function fromB64(b64) {
 }
 async function gh(method, path, body, raw) {
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(`https://api.github.com/repos/${REMOTE.repo}/${path}`, {
+    // App trên màn hình chính iPhone giữ lại kết quả 404 cũ dù đã no-store: thêm tham số đổi mỗi lần.
+    const bust = method === 'GET' ? `${path.includes('?') ? '&' : '?'}_=${Date.now()}` : '';
+    const res = await fetch(`https://api.github.com/repos/${REMOTE.repo}/${path}${bust}`, {
       method, cache: 'no-store',
       headers: { Authorization: `Bearer ${store(REMOTE_TOKEN_STORE)}`, 'X-GitHub-Api-Version': '2022-11-28',
         Accept: raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json' },
