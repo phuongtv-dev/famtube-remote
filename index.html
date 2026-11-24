@@ -437,7 +437,7 @@ async function gh(method, path, body, raw) {
     // GET 404 = chưa có file. Ghi mà 404 = token không thấy repo (chưa chọn repo khi tạo token).
     if (res.status === 404 && method === 'GET') return null;
     if (res.status === 404) throw new Error(`Token GitHub không có quyền repo ${REMOTE.repo}: sửa token, chọn repo này`);
-    if (res.status === 409 && attempt < 2) { await sleep(700 * (attempt + 1)); continue; }
+    if (res.status === 409 && attempt < 4) { await sleep(700 * (attempt + 1)); continue; }   // tivi ghi cùng lúc
     if (res.status === 401) throw new Error('Token GitHub sai hoặc đã hết hạn');
     if (!res.ok) throw new Error('GitHub lỗi ' + res.status);
     return raw ? res.text() : res.json();
