@@ -235,6 +235,15 @@ async function gh(method, path, body, raw) {
     return raw ? res.text() : res.json();
   }
 }
+// Trang online: gửi lỗi giao diện vào repo (log/) để xem từ xa khi trang trên điện thoại không chạy.
+function reportError(where, err) {
+  if (!REMOTE || !store(REMOTE_TOKEN_STORE)) return;
+  const info = { where, message: String(err && err.message || err), stack: String(err && err.stack || ''),
+    ua: navigator.userAgent, standalone: !!navigator.standalone, at: new Date().toISOString() };
+  gh('PUT', `contents/log/${Date.now()}.json`, { message: 'lỗi trang online', content: toB64(JSON.stringify(info)) }).catch(() => {});
+}
+window.addEventListener('error', (e) => reportError('window', e.error || e.message));
+window.addEventListener('unhandledrejection', (e) => reportError('promise', e.reason));
 async function remoteApi(method, path, body) {
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`;
   const req = { method, path, body: body === undefined ? null : JSON.stringify(body), at: Date.now() };
@@ -849,6 +858,7 @@ async function start() {
     applyConfig(c);
     $('remoteState').textContent = 'Quản lý online · tivi đang bật';
   } catch (e) {
+    reportError('start', e);
     $('remoteState').textContent = 'Quản lý online · ' + e.message;
     if (/Token GitHub/.test(e.message)) { store(REMOTE_TOKEN_STORE, null); toast(e.message, true); start(); }
   }
