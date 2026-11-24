@@ -489,7 +489,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261124194222';
+const PAGE_BUILD = '20261124195853';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -1211,6 +1211,7 @@ function renderExtras() {
     `<label><input type="checkbox" data-app="${esc(a.pkg)}" ${e.trackedApps.includes(a.pkg) ? 'checked' : ''}>${esc(a.label)}</label>`).join('')
     : '<div class="empty">Cập nhật app trên tivi để chọn</div>';
   $('askWho').checked = e.askWhoWatches !== false;
+  if (typeof updateGuardMode === 'function') updateGuardMode();
   $('repOn').checked = !!e.reportAt;
   $('repAt').value = e.reportAt || '20:30';
   $('repAt').disabled = !e.reportAt;
@@ -1267,7 +1268,7 @@ $('appList').addEventListener('change', (e) => {
   extras.trackedApps = e.target.checked ? [...new Set([...extras.trackedApps, pkg])] : extras.trackedApps.filter((x) => x !== pkg);
   setExtrasDirty();
 });
-$('askWho').addEventListener('change', () => { extras.askWhoWatches = $('askWho').checked; setExtrasDirty(); });
+$('askWho').addEventListener('change', () => { extras.askWhoWatches = $('askWho').checked; setExtrasDirty(); updateGuardMode(); });
 $('repOn').addEventListener('change', () => { extras.reportAt = $('repOn').checked ? ($('repAt').value || '20:30') : ''; setExtrasDirty(); renderExtras(); });
 $('repAt').addEventListener('change', () => { if ($('repOn').checked) { extras.reportAt = $('repAt').value; setExtrasDirty(); } });
 $('repNow').addEventListener('click', async () => {
@@ -1302,10 +1303,12 @@ function setConn(state, text) {
 
 function updateGuardMode() {
   const on = $('gAllowDirect').checked;
-  $('gDirectBox').style.display = on ? '' : 'none';
-  $('gModeNote').textContent = on
-    ? 'Tính giờ riêng theo giới hạn dưới đây'
-    : 'Đang tắt: mở YouTube sẽ bị kéo về FamTube';
+  const askWho = $('askWho').checked;
+  // Bật "Ai đang xem?": giờ xem tính theo giới hạn của từng con (tab Profile), không cần giới hạn chung.
+  $('gDirectBox').style.display = on && !askWho ? '' : 'none';
+  $('gModeNote').textContent = !on ? 'Đang tắt: mở YouTube sẽ bị kéo về FamTube'
+    : askWho ? 'Tivi hỏi "Ai đang xem?" rồi tính vào giờ của con đó (giới hạn ở tab Profile)'
+    : 'Không hỏi con nào xem: tính chung theo giới hạn dưới đây';
 }
 $('gAllowDirect').addEventListener('change', updateGuardMode);
 $('gSave').addEventListener('click', async () => {
