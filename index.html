@@ -307,6 +307,15 @@
     </div>
   </div>
 
+  <div class="section-title">Chặn kênh trong YouTube</div>
+  <div class="card stack">
+    <div class="note">Con mở video của kênh bị chặn: tivi báo và tự thoát video. (Video vẫn có thể hiện ở trang gợi ý của YouTube, chỉ không xem được.)</div>
+    <input type="text" id="blkSearch" placeholder="Gõ tên kênh (từ 3 ký tự) để tìm…" autocomplete="off" autocapitalize="off">
+    <div id="blkResults"></div>
+    <div class="field">Đang chặn <span class="note" id="blkCount"></span></div>
+    <div id="blkList" class="list"></div>
+  </div>
+
   <div class="section-title">Mở YouTube không qua FamTube</div>
   <div class="card list">
     <div class="item">
@@ -641,6 +650,7 @@ function render() {
     </div>`).join('') : '<div class="empty">Chưa có kênh nào. Thêm kênh ở trên.</div>';
 
   renderRemote();
+  renderBlocked();
   $('ver').textContent = cfg.version ? `FamTube ${cfg.version} · bản dựng ${cfg.build}` : '';
   $('minDur').value = String(cfg.minDurationSec);
   if (!$('minDur').value) $('minDur').value = '180';
@@ -914,7 +924,7 @@ function renderTv() {
         <div class="thumb">${pl.isPlaying ? '▶' : '❚❚'}</div>
         <div class="grow">
           <div class="tv-title">${esc(pl.title)}</div>
-          <div class="sub">${esc(pl.channel || '')}${pl.durationSec ? ' · ' + fmtDur(pl.positionSec) + ' / ' + fmtDur(pl.durationSec) : ''}${pl.isPlaying ? '' : ' · đang dừng'}</div>
+          <div class="sub">${esc(pl.channel || '')}${pl.channel && !isBlocked(pl.channel) ? ` · <a href="#" data-block-title="${esc(pl.channel)}" style="color:var(--danger); font-weight:600; text-decoration:none">Chặn kênh</a>` : ''}${pl.durationSec ? ' · ' + fmtDur(pl.positionSec) + ' / ' + fmtDur(pl.durationSec) : ''}${pl.isPlaying ? '' : ' · đang dừng'}</div>
           ${pl.durationSec ? `<div class="progress"><div style="width:${pct}%"></div></div>` : ''}
         </div>
       </div>`;
@@ -951,7 +961,7 @@ function renderTv() {
       <div class="chips">${[15, 30, 60, 120].map((m) => `<button data-tv="lock" data-min="${m}">🔒 ${m < 60 ? m + ' phút' : m / 60 + ' giờ'}</button>`).join('')}</div>
     </div>`}
     ${hist.length ? `<details><summary>Đã xem gần đây (${hist.length})</summary><div class="list hist">${hist.map((h) =>
-      `<div class="item"><span class="sub" style="min-width:42px">${fmtClock(h.at)}</span><div class="label">${esc(h.title)}<div class="sub">${esc(h.channel || '')}</div></div></div>`).join('')}</div></details>` : ''}
+      `<div class="item"><span class="sub" style="min-width:42px">${fmtClock(h.at)}</span><div class="label">${esc(h.title)}<div class="sub">${esc(h.channel || '')}</div></div>${h.channel ? (isBlocked(h.channel) ? '<span class="badge warn">Đã chặn</span>' : `<button class="pill" data-block-title="${esc(h.channel)}">Chặn kênh</button>`) : ''}</div>`).join('')}</div></details>` : ''}
   </div>`;
 }
 async function tvCommand(body, reload = true) {
@@ -962,6 +972,8 @@ async function tvCommand(body, reload = true) {
   } catch (e) { toast(e.message, true); }
 }
 $('tvCard').addEventListener('click', (e) => {
+  const blk = e.target.closest('[data-block-title]');
+  if (blk) { e.preventDefault(); return blockChannel('', blk.dataset.blockTitle); }
   const b = e.target.closest('button[data-tv]');
   if (!b) return;
   const tv = cfg.tv || {};
@@ -985,6 +997,65 @@ $('tvCard').addEventListener('click', (e) => {
       return tvCommand({ action: 'lock', minutes: Number(b.dataset.min) });
     case 'unlock': return tvCommand({ action: 'lock', minutes: 0 });
   }
+});
+
+// ================= Chặn kênh trong YouTube =================
+async function saveBlocked(list, msg) {
+  try {
+    await api('PUT', '/api/blocked-channels', list);
+    cfg.blockedChannels = list;
+    renderBlocked();
+    renderTv();
+    toast(msg);
+  } catch (e) { toast(e.message, true); }
+}
+function isBlocked(title) {
+  const n = (title || '').trim().toLowerCase();
+  return (cfg.blockedChannels || []).some((c) => c.title.trim().toLowerCase() === n);
+}
+function blockChannel(id, title) {
+  if (!title || isBlocked(title)) return;
+  if (!confirm(`Chặn kênh “${title}” trong YouTube?`)) return;
+  saveBlocked([...(cfg.blockedChannels || []), { id: id || '', title }], `Đã chặn “${title}”`);
+}
+function renderBlocked() {
+  const list = cfg.blockedChannels || [];
+  $('blkCount').textContent = list.length ? `(${list.length} kênh)` : '';
+  $('blkList').innerHTML = list.length ? list.map((c, i) => `<div class="item">
+      <div class="label">🚫 ${esc(c.title)}</div>
+      <button class="pill" data-unblock="${i}">Bỏ chặn</button></div>`).join('')
+    : '<div class="empty">Chưa chặn kênh nào</div>';
+}
+$('blkList').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-unblock]');
+  if (!b) return;
+  const list = [...(cfg.blockedChannels || [])];
+  const [c] = list.splice(Number(b.dataset.unblock), 1);
+  saveBlocked(list, `Đã bỏ chặn “${c.title}”`);
+});
+// Gõ từ 3 ký tự thì tự tìm (đợi ngừng gõ 0,8 giây để đỡ tốn lượt tìm).
+let blkTimer = null, blkSeq = 0;
+$('blkSearch').addEventListener('input', () => {
+  clearTimeout(blkTimer);
+  const q = $('blkSearch').value.trim();
+  if (q.length < 3) { $('blkResults').innerHTML = ''; return; }
+  blkTimer = setTimeout(async () => {
+    const seq = ++blkSeq;
+    $('blkResults').innerHTML = '<div class="empty">Đang tìm…</div>';
+    try {
+      const r = await api('GET', '/api/search/channels?q=' + encodeURIComponent(q));
+      if (seq !== blkSeq) return;
+      $('blkResults').innerHTML = r.channels.length ? r.channels.slice(0, 6).map((c) => `<div class="ch">
+          ${c.thumbnailUrl ? `<img src="${esc(c.thumbnailUrl)}" alt="">` : '<div class="ph"></div>'}
+          <div class="grow"><div class="name">${esc(c.title)}</div><div class="sub">${fmtSubs(c.subscriberCount)} người đăng ký</div></div>
+          <button class="danger" style="height:36px" data-block-id="${esc(c.id)}" data-block-title="${esc(c.title)}" ${isBlocked(c.title) ? 'disabled' : ''}>${isBlocked(c.title) ? 'Đã chặn' : 'Chặn'}</button>
+        </div>`).join('') : '<div class="empty">Không tìm thấy kênh</div>';
+    } catch (e) { if (seq === blkSeq) $('blkResults').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+  }, 800);
+});
+$('blkResults').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-block-title]');
+  if (b) blockChannel(b.dataset.blockId, b.dataset.blockTitle);
 });
 
 // ================= Tab & thanh chọn =================
@@ -1329,7 +1400,7 @@ $('restoreBtn').addEventListener('click', async () => {
 // Trạng thái kết nối theo lần tivi đăng trạng thái gần nhất (tivi bật thì đăng lại ít nhất mỗi khi có đổi).
 function showConn(at) {
   const age = Date.now() - (at || 0);
-  if (age < 3 * 60000) setConn('on', 'Tivi đang bật');
+  if (age < 3 * 60000) setConn('on', `${cfg.tvName || 'Tivi'} · đang bật`);
   else setConn('', 'Cập nhật ' + new Date(at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
 }
 // Trang online: tab Hôm nay tự làm mới mỗi 15 giây (đọc bản tivi đăng sẵn, không gửi lệnh).
@@ -1404,7 +1475,7 @@ async function start() {
   if (!REMOTE) {
     setConn('', 'Đang kết nối…');
     await load();
-    setConn(cfg.version ? 'on' : 'off', cfg.version ? 'Cùng wifi với tivi' : 'Không kết nối được tivi');
+    setConn(cfg.version ? 'on' : 'off', cfg.version ? `${cfg.tvName || 'Tivi'} · cùng wifi` : 'Không kết nối được tivi');
     handleApproveFromQr();
     return;
   }
