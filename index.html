@@ -2,12 +2,23 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<!-- Dùng như app khi thêm vào màn hình chính (trang online; trên tivi các file này không có, bỏ qua). -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FamTube">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F3F3F8">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
 <meta name="color-scheme" content="light">
 <title>FamTube – Quản lý</title>
 <style>
   :root { --ink:#1B1A3D; --muted:#4E4D6E; --line:rgba(27,26,61,.12); --bg:#F3F3F8; --card:#fff; --accent:#2741F1; --warm:#D88689; }
-  * { box-sizing:border-box; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  /* Như app: không phóng to bằng chạm đúp, không kéo giãn trang, không tự phóng chữ. */
+  html { -webkit-text-size-adjust:100%; text-size-adjust:100%; touch-action:manipulation; overscroll-behavior:none; }
+  button, a, label, summary { touch-action:manipulation; -webkit-user-select:none; user-select:none; }
   body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
          padding:max(20px,env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom)); }
   h1 { font:400 28px/1.2 Georgia,serif; margin:0 0 4px; }
@@ -252,6 +263,15 @@ function reportError(where, err) {
     ua: navigator.userAgent, standalone: !!navigator.standalone, at: new Date().toISOString() };
   gh('PUT', `contents/log/${Date.now()}.json`, { message: 'lỗi trang online', content: toB64(JSON.stringify(info)) }).catch(() => {});
 }
+// iPhone bỏ qua user-scalable=no: chặn phóng to bằng hai ngón và chạm đúp.
+['gesturestart', 'gesturechange'].forEach((t) => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
+document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+  const now = Date.now();
+  if (now - lastTouchEnd < 300 && !e.target.closest('input, select, textarea')) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
 window.addEventListener('error', (e) => reportError('window', e.error || e.message));
 window.addEventListener('unhandledrejection', (e) => reportError('promise', e.reason));
 async function remoteApi(method, path, body) {
