@@ -38,6 +38,11 @@
   .bar button { width:100%; height:50px; font-size:16px; }
   #toast { position:fixed; left:16px; right:16px; bottom:calc(84px + env(safe-area-inset-bottom)); background:var(--ink); color:#fff; padding:12px 14px; border-radius:12px; font-size:14px; display:none; }
   #toast.err { background:#8A2E35; }
+  #busy { position:fixed; left:0; right:0; top:0; z-index:50; display:none; align-items:center; gap:10px; justify-content:center;
+          padding:max(10px,env(safe-area-inset-top)) 16px 10px; background:var(--accent); color:#fff; font-size:14px; font-weight:600; }
+  #busy .spin { width:16px; height:16px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  body.busy button, body.busy input, body.busy select { pointer-events:none; opacity:.55; }
   .pf-head { display:flex; gap:12px; align-items:center; }
   .avatar { width:44px; height:44px; border-radius:999px; display:flex; align-items:center; justify-content:center; font:400 20px Georgia,serif; color:var(--ink); overflow:hidden; flex-shrink:0; }
   .avatar img { width:100%; height:100%; object-fit:cover; }
@@ -191,6 +196,7 @@
 
 <div class="bar"><button id="save" class="primary" disabled>Lưu nhóm</button></div>
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="busy" role="status" aria-live="polite"><span class="spin"></span><span id="busyText"></span></div>
 
 <!-- Chỉ có trên trang online (GitHub Pages): địa chỉ Supabase. Trên tivi file này không có. -->
 <script src="config.js"></script>
@@ -274,7 +280,34 @@ let dirty = false;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
+// Đang chờ tivi: thanh xanh trên cùng có vòng xoay + số giây, khóa các nút để không bấm hai lần.
+let busyCount = 0, busyTimer = null, busyStart = 0;
+function setBusy(on, method) {
+  busyCount += on ? 1 : -1;
+  if (busyCount > 0 && on && busyCount === 1) {
+    busyStart = Date.now();
+    const label = method === 'GET' ? 'Đang lấy dữ liệu từ tivi' : 'Đang lưu lên tivi';
+    const tick = () => {
+      const sec = Math.floor((Date.now() - busyStart) / 1000);
+      $('busyText').textContent = REMOTE ? `${label}… ${sec}s` : `${label}…`;
+    };
+    tick();
+    busyTimer = setInterval(tick, 1000);
+    $('busy').style.display = 'flex';
+    document.body.classList.add('busy');
+  } else if (busyCount <= 0) {
+    busyCount = 0;
+    clearInterval(busyTimer);
+    $('busy').style.display = 'none';
+    document.body.classList.remove('busy');
+  }
+}
 async function api(method, path, body) {
+  setBusy(true, method);
+  try { return await apiCall(method, path, body); }
+  finally { setBusy(false); }
+}
+async function apiCall(method, path, body) {
   if (REMOTE) return remoteApi(method, path, body);
   const res = await fetch(path, {
     method,
