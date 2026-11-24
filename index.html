@@ -433,6 +433,19 @@
 <script src="config.js"></script>
 <script>
 const token = new URLSearchParams(location.search).get('t') || '';
+// Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
+// vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
+const PAGE_BUILD = '20261124131048';
+async function checkPageUpdate() {
+  if (PAGE_BUILD.startsWith('__')) return;
+  try {
+    const r = await fetch('version.json?_=' + Date.now(), { cache: 'no-store' });
+    const v = (await r.json()).build;
+    if (v && v !== PAGE_BUILD) location.replace(location.pathname + '?v=' + v + location.hash);
+  } catch {}
+}
+checkPageUpdate();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkPageUpdate(); });
 // Trang online: không có token tivi, lệnh đi qua repo GitHub riêng tư (xem RemoteRelay.kt trên tivi).
 const REMOTE = !token && window.FAMTUBE_REMOTE ? window.FAMTUBE_REMOTE : null;
 const REMOTE_TOKEN_STORE = 'famtubeGithubToken';
