@@ -8,210 +8,365 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="FamTube">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#F3F3F8">
+<meta name="theme-color" content="#F4F4F9">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="color-scheme" content="light">
 <title>FamTube – Quản lý</title>
 <style>
-  :root { --ink:#1B1A3D; --muted:#4E4D6E; --line:rgba(27,26,61,.12); --bg:#F3F3F8; --card:#fff; --accent:#2741F1; --warm:#D88689; }
+  :root {
+    --ink:#1B1A3D; --muted:#6B6A88; --line:rgba(27,26,61,.08); --line2:rgba(27,26,61,.16);
+    --bg:#F4F4F9; --card:#fff; --accent:#2741F1; --accent-soft:#E8EBFE; --warm:#D88689; --warm-soft:#FBEDEE;
+    --ok:#1F9D63; --ok-soft:#E3F5EC; --danger:#C2414B; --radius:18px;
+    --tabbar:64px;
+  }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   /* Như app: không phóng to bằng chạm đúp, không kéo giãn trang, không tự phóng chữ. */
   html { -webkit-text-size-adjust:100%; text-size-adjust:100%; touch-action:manipulation; overscroll-behavior:none; }
   button, a, label, summary { touch-action:manipulation; -webkit-user-select:none; user-select:none; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-         padding:max(20px,env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom)); }
-  h1 { font:400 28px/1.2 Georgia,serif; margin:0 0 4px; }
-  h2 { font-size:15px; margin:28px 0 10px; }
-  .sub { color:var(--muted); font-size:13px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:10px; }
-  input[type=text], input[inputmode=numeric], select { font:inherit; height:44px; padding:0 12px; border:1px solid rgba(27,26,61,.2); border-radius:10px; background:#fff; color:var(--ink); width:100%; }
-  button { font:inherit; font-size:14px; font-weight:600; height:40px; padding:0 14px; border-radius:10px; border:1px solid rgba(27,26,61,.2); background:#fff; color:var(--ink); cursor:pointer; }
-  button.primary { background:var(--accent); color:#fff; border:0; }
-  button.pill { height:32px; border-radius:999px; font-size:13px; font-weight:500; color:var(--muted); }
-  button.pill[aria-pressed=true] { background:var(--ink); color:#fff; border-color:var(--ink); }
-  button.pill.lock[aria-pressed=true] { background:var(--warm); color:var(--ink); border-color:var(--warm); }
-  button.icon { width:36px; padding:0; }
-  button:disabled { opacity:.4; }
-  .row { display:flex; gap:8px; align-items:center; }
-  .grow { flex:1; min-width:0; }
-  .group-head { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-  .group-head input { flex:1 1 140px; height:40px; }
-  details { margin-top:10px; }
-  summary { cursor:pointer; color:var(--accent); font-size:14px; font-weight:500; }
-  .checks label { display:flex; gap:10px; align-items:center; padding:8px 2px; border-bottom:1px solid var(--line); font-size:15px; }
-  .checks input { width:20px; height:20px; }
-  .ch { display:flex; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }
-  .ch img, .ch .ph { width:36px; height:36px; border-radius:999px; background:#E4E6F8; object-fit:cover; flex-shrink:0; }
-  .ch .name { font-weight:500; }
-  .empty { color:var(--muted); font-size:14px; padding:6px 0; }
-  .bar { position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:rgba(243,243,248,.95); border-top:1px solid var(--line); }
-  .bar button { width:100%; height:50px; font-size:16px; }
-  #toast { position:fixed; left:16px; right:16px; bottom:calc(84px + env(safe-area-inset-bottom)); background:var(--ink); color:#fff; padding:12px 14px; border-radius:12px; font-size:14px; display:none; }
-  #toast.err { background:#8A2E35; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;
+         padding:0 16px calc(var(--tabbar) + 90px + env(safe-area-inset-bottom)); }
   /* iPhone tự phóng to khi chạm ô nhập có chữ nhỏ hơn 16px: giữ mọi ô nhập ở 16px. */
   input, select, textarea { font-size:16px !important; }
-  #busy { position:fixed; left:0; right:0; top:0; z-index:50; display:none; align-items:center; gap:10px; justify-content:center;
-          padding:max(10px,env(safe-area-inset-top)) 16px 10px; background:var(--accent); color:#fff; font-size:14px; font-weight:600; }
-  #busy .spin { width:16px; height:16px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  body.busy button, body.busy input, body.busy select { pointer-events:none; opacity:.55; }
+
+  /* ---------- Đầu trang ---------- */
+  header { position:sticky; top:0; z-index:20; margin:0 -16px; padding:max(14px,env(safe-area-inset-top)) 16px 12px;
+           background:rgba(244,244,249,.92); -webkit-backdrop-filter:saturate(1.6) blur(16px); backdrop-filter:saturate(1.6) blur(16px); }
+  .head-row { display:flex; align-items:center; gap:10px; }
+  header h1 { font:700 26px/1.15 -apple-system,system-ui,sans-serif; letter-spacing:-.02em; margin:0; flex:1; }
+  .chip { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 10px; border-radius:999px; font-size:12px; font-weight:600;
+          background:#fff; border:1px solid var(--line2); color:var(--muted); white-space:nowrap; max-width:60vw; overflow:hidden; text-overflow:ellipsis; }
+  .chip .dot { width:8px; height:8px; border-radius:50%; background:#B9B8CC; flex-shrink:0; }
+  .chip.on .dot { background:var(--ok); box-shadow:0 0 0 3px var(--ok-soft); }
+  .chip.off .dot { background:var(--danger); }
+
+  /* ---------- Thẻ & danh sách ---------- */
+  .tab { display:none; animation:fade .18s ease; }
+  .tab.active { display:block; }
+  @keyframes fade { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+  .section-title { font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:22px 4px 8px; }
+  .card { background:var(--card); border-radius:var(--radius); padding:16px; margin-bottom:12px; box-shadow:0 1px 2px rgba(27,26,61,.04), 0 4px 16px rgba(27,26,61,.04); }
+  .card-title { font-weight:700; font-size:16px; margin:0 0 2px; }
+  .sub { color:var(--muted); font-size:13px; }
+  .note { font-size:12.5px; color:var(--muted); line-height:1.4; }
+  .stack { display:flex; flex-direction:column; gap:12px; }
+  .row { display:flex; gap:8px; align-items:center; }
+  .grow { flex:1; min-width:0; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end; }
+  .empty { color:var(--muted); font-size:14px; padding:6px 0; }
+  .list > * + * { border-top:1px solid var(--line); }
+  .item { display:flex; align-items:center; gap:12px; padding:12px 0; min-height:52px; }
+  .item:first-child { padding-top:0; } .item:last-child { padding-bottom:0; }
+  .item .label { flex:1; min-width:0; font-size:15px; }
+  .item .label .sub { margin-top:1px; }
+
+  /* ---------- Ô nhập & nút ---------- */
+  input[type=text], input[type=number], input[inputmode=numeric], input[type=time], select {
+    font:inherit; height:46px; padding:0 12px; border:1px solid var(--line2); border-radius:12px; background:#FAFAFD; color:var(--ink); width:100%;
+    -webkit-appearance:none; appearance:none; }
+  select { background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+           background-position:calc(100% - 18px) 20px, calc(100% - 13px) 20px; background-size:5px 5px; background-repeat:no-repeat; padding-right:32px; }
+  input:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); background:#fff; }
+  .field { display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:500; color:var(--muted); }
+  button { font:inherit; font-size:15px; font-weight:600; height:44px; padding:0 16px; border-radius:12px; border:0;
+           background:var(--accent-soft); color:var(--accent); cursor:pointer; transition:transform .08s, opacity .15s; }
+  button:active { transform:scale(.97); }
+  button.primary { background:var(--accent); color:#fff; }
+  button.ghost { background:transparent; color:var(--accent); padding:0 4px; height:36px; }
+  button.danger { background:var(--warm-soft); color:var(--danger); }
+  button.block { width:100%; }
+  button.pill { height:32px; border-radius:999px; font-size:13px; font-weight:600; padding:0 12px; background:#F0F0F6; color:var(--muted); }
+  button.pill[aria-pressed=true] { background:var(--ink); color:#fff; }
+  button.pill.lock[aria-pressed=true] { background:var(--warm); color:var(--ink); }
+  button.icon { width:36px; height:36px; padding:0; border-radius:10px; background:#F0F0F6; color:var(--ink); }
+  button.dashed { background:transparent; border:1.5px dashed var(--line2); color:var(--accent); width:100%; }
+  button:disabled { opacity:.35; }
+
+  /* Công tắc kiểu iOS cho ô tích */
+  input.switch { -webkit-appearance:none; appearance:none; width:50px; height:30px; border-radius:999px; background:#E1E1EB; position:relative;
+                 flex-shrink:0; cursor:pointer; transition:background .2s; margin:0; }
+  input.switch::after { content:""; position:absolute; top:2px; left:2px; width:26px; height:26px; border-radius:50%; background:#fff;
+                        box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .2s; }
+  input.switch:checked { background:var(--ok); }
+  input.switch:checked::after { transform:translateX(20px); }
+
+  .seg { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; background:#EEEEF5; border-radius:12px; padding:3px; gap:3px; }
+  .seg button { height:36px; border-radius:9px; background:transparent; color:var(--muted); font-size:14px; }
+  .seg button[aria-pressed=true] { background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(27,26,61,.12); }
+
+  details > summary { list-style:none; cursor:pointer; color:var(--accent); font-size:14px; font-weight:600; padding:4px 0; }
+  details > summary::-webkit-details-marker { display:none; }
+  details > summary::after { content:" ›"; display:inline-block; transition:transform .2s; }
+  details[open] > summary::after { transform:rotate(90deg); }
+  .checks label { display:flex; gap:12px; align-items:center; padding:10px 2px; border-bottom:1px solid var(--line); font-size:15px; font-weight:400; color:var(--ink); }
+  .checks label:last-child { border-bottom:0; }
+  .checks input { width:22px; height:22px; accent-color:var(--accent); flex-shrink:0; }
+
+  /* ---------- Hôm nay ---------- */
+  .kid { display:flex; gap:14px; align-items:center; }
+  .ring { --p:0; --c:var(--accent); width:64px; height:64px; border-radius:50%; flex-shrink:0; display:grid; place-items:center;
+          background:conic-gradient(var(--c) calc(var(--p)*1%), #ECECF4 0); }
+  .ring > div { width:50px; height:50px; border-radius:50%; background:#fff; display:grid; place-items:center; overflow:hidden;
+                font-weight:700; font-size:18px; }
+  .ring > div img { width:100%; height:100%; object-fit:cover; }
+  .kid .big { font-size:22px; font-weight:700; letter-spacing:-.01em; }
+  .kid .big small { font-size:14px; font-weight:500; color:var(--muted); }
+  .badge { display:inline-block; font-size:12px; font-weight:600; padding:3px 9px; border-radius:999px; background:var(--ok-soft); color:var(--ok); }
+  .badge.warn { background:var(--warm-soft); color:var(--danger); }
+  .badge.info { background:var(--accent-soft); color:var(--accent); }
+  .actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
+  .stat { display:flex; align-items:center; gap:12px; }
+  .stat .ico { width:40px; height:40px; border-radius:12px; display:grid; place-items:center; font-size:20px; background:var(--accent-soft); flex-shrink:0; }
+
+  /* ---------- Nội dung ---------- */
+  .group-head { display:flex; gap:6px; align-items:center; }
+  .group-head input { height:42px; font-weight:600; }
+  .ch { display:flex; gap:12px; align-items:center; padding:10px 0; }
+  .ch + .ch, .sr + .sr { border-top:1px solid var(--line); }
+  .ch img, .ch .ph { width:40px; height:40px; border-radius:50%; background:#E4E6F8; object-fit:cover; flex-shrink:0; }
+  .ch .name { font-weight:600; font-size:15px; }
+
+  /* ---------- Profile ---------- */
   .pf-head { display:flex; gap:12px; align-items:center; }
-  .avatar { width:44px; height:44px; border-radius:999px; display:flex; align-items:center; justify-content:center; font:400 20px Georgia,serif; color:var(--ink); overflow:hidden; flex-shrink:0; }
+  .avatar { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px;
+            color:var(--ink); overflow:hidden; flex-shrink:0; }
   .avatar img { width:100%; height:100%; object-fit:cover; }
   .swatches { display:flex; gap:10px; }
-  .swatch { width:32px; height:32px; border-radius:999px; padding:0; border:1px solid rgba(27,26,61,.15); }
-  .swatch[aria-pressed=true] { border:3px solid var(--ink); }
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .field { display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--muted); }
-  .seg { display:grid; grid-template-columns:1fr 1fr; border:1px solid rgba(27,26,61,.2); border-radius:10px; overflow:hidden; }
-  .seg button { border:0; border-radius:0; height:38px; color:var(--muted); background:#fff; }
-  .seg button[aria-pressed=true] { background:var(--ink); color:#fff; }
-  .stack { display:flex; flex-direction:column; gap:12px; }
-  .note { font-size:12px; color:var(--muted); }
-  input[type=time] { font:inherit; height:42px; padding:0 10px; border:1px solid rgba(27,26,61,.2); border-radius:10px; background:#fff; color:var(--ink); width:100%; }
+  .swatch { width:34px; height:34px; border-radius:50%; padding:0; border:2px solid #fff; box-shadow:0 0 0 1px var(--line2); }
+  .swatch[aria-pressed=true] { box-shadow:0 0 0 2px var(--ink); }
   input[type=range] { width:100%; accent-color:var(--accent); }
   #editor { display:none; }
-  .crop { position:relative; width:100%; border-radius:12px; overflow:hidden; background:#1B1A3D; }
+  .crop { position:relative; width:100%; border-radius:14px; overflow:hidden; background:#1B1A3D; }
   .crop canvas { display:block; width:100%; height:auto; }
-  .crop .ring { position:absolute; inset:10%; border-radius:999px; box-shadow:0 0 0 999px rgba(27,26,61,.55); border:2px solid #fff; pointer-events:none; }
+  .crop .ring2 { position:absolute; inset:10%; border-radius:999px; box-shadow:0 0 0 999px rgba(27,26,61,.55); border:2px solid #fff; pointer-events:none; }
   .crop .dim { position:absolute; inset:0; pointer-events:none; }
+
+  /* ---------- Thanh dưới: lưu + tab ---------- */
+  .savebar { position:fixed; left:12px; right:12px; bottom:calc(var(--tabbar) + 10px + env(safe-area-inset-bottom)); z-index:30;
+             display:none; gap:8px; padding:8px; border-radius:16px; background:var(--ink); box-shadow:0 8px 24px rgba(27,26,61,.25); align-items:center; }
+  .savebar.show { display:flex; }
+  .savebar span { color:#fff; font-size:14px; flex:1; padding-left:8px; }
+  .savebar button { height:40px; }
+  nav.tabbar { position:fixed; left:0; right:0; bottom:0; z-index:30; display:grid; grid-template-columns:repeat(4,1fr);
+               padding:6px 6px env(safe-area-inset-bottom); background:rgba(255,255,255,.94); border-top:1px solid var(--line);
+               -webkit-backdrop-filter:saturate(1.6) blur(16px); backdrop-filter:saturate(1.6) blur(16px); }
+  nav.tabbar button { height:var(--tabbar); background:none; border-radius:12px; display:flex; flex-direction:column; align-items:center;
+                      justify-content:center; gap:3px; color:#9A99B2; font-size:11px; font-weight:600; padding:0; }
+  nav.tabbar button svg { width:24px; height:24px; }
+  nav.tabbar button[aria-selected=true] { color:var(--accent); }
+
+  #toast { position:fixed; left:16px; right:16px; bottom:calc(var(--tabbar) + 20px + env(safe-area-inset-bottom)); z-index:60; background:var(--ink); color:#fff;
+           padding:13px 16px; border-radius:14px; font-size:14px; font-weight:500; display:none; box-shadow:0 8px 24px rgba(27,26,61,.25); }
+  #toast.err { background:var(--danger); }
+  #busy { position:fixed; left:50%; transform:translateX(-50%); top:calc(max(14px,env(safe-area-inset-top)) + 46px); z-index:50; display:none; align-items:center; gap:10px;
+          padding:8px 14px; border-radius:999px; background:var(--accent); color:#fff; font-size:13px; font-weight:600; box-shadow:0 6px 20px rgba(39,65,241,.35); white-space:nowrap; }
+  #busy .spin { width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  body.busy main button, body.busy main input, body.busy main select, body.busy .savebar button { pointer-events:none; opacity:.5; }
 </style>
 </head>
 <body>
-<h1>FamTube</h1>
-<div id="tokenGate" class="card stack" style="display:none">
-  <b>Bật quản lý online trên điện thoại này</b>
-  <div class="sub">Dán token GitHub (giống token đã lưu cho tivi ở mục "Quản lý online" của trang quản lý). Chỉ cần làm một lần, token lưu trong trình duyệt điện thoại.</div>
+<header>
+  <div class="head-row">
+    <h1 id="pageTitle">Hôm nay</h1>
+    <span class="chip" id="remoteState"><span class="dot"></span><span id="remoteStateText">Đang kết nối…</span></span>
+  </div>
+</header>
+
+<div id="tokenGate" class="card stack" style="display:none; margin-top:8px">
+  <div class="card-title">Bật quản lý online</div>
+  <div class="note">Dán token GitHub (giống token đã lưu cho tivi ở mục "Quản lý online"). Chỉ cần làm một lần.</div>
   <input type="text" id="gateToken" placeholder="github_pat_…" autocomplete="off">
   <button id="gateBtn" class="primary">Lưu</button>
 </div>
-<div class="sub" id="remoteState" style="display:none; margin-bottom:10px"></div>
 
-<div class="sub">Trang quản lý tivi. Thay đổi lưu thẳng vào tivi.</div>
-<div class="sub" id="ver"></div>
-
-<h2>Profile</h2>
-<div id="editor" class="card stack">
-  <div style="font-weight:600" id="edTitle"></div>
-  <div class="crop" id="edCrop"><canvas id="edCanvas"></canvas><div class="ring" id="edRing"></div><div class="dim" id="edDim"></div></div>
-  <label class="field" id="edZoomWrap">Phóng to<input type="range" id="edZoom" min="100" max="250" value="100"></label>
-  <label class="field" id="edBlurWrap">Độ mờ<input type="range" id="edBlur" min="0" max="20" value="6"></label>
-  <label class="field" id="edDimWrap">Độ tối<input type="range" id="edDimR" min="0" max="90" step="5" value="55"></label>
-  <div class="grid2"><button id="edCancel">Hủy</button><button id="edSave" class="primary">Lưu ảnh lên tivi</button></div>
-</div>
-<div id="profiles"></div>
-<button id="newProfile" style="width:100%; border-style:dashed; color:var(--accent)">+ Thêm profile</button>
-<div style="margin-top:10px"><button id="saveProfiles" class="primary" style="width:100%" disabled>Lưu profile</button></div>
-
-<h2>Thêm kênh</h2>
-<div class="card">
-  <label for="addInput" class="sub">Dán link kênh, @tên kênh để thêm thẳng — hoặc gõ tên/chủ đề để tìm trên YouTube</label>
-  <div class="row" style="margin-top:6px">
-    <input id="addInput" type="text" class="grow" placeholder="youtube.com/@tenkenh hoặc “khoa học cho trẻ”" autocomplete="off" autocapitalize="off">
+<main>
+<!-- ===================== HÔM NAY ===================== -->
+<section class="tab active" id="tab-today" data-title="Hôm nay">
+  <div id="todayKids"></div>
+  <div class="section-title">YouTube Shorts</div>
+  <div class="card">
+    <div class="stat">
+      <div class="ico">🚫</div>
+      <div class="grow">
+        <div class="card-title" id="shortsTitle">Shorts</div>
+        <div class="sub" id="gShortsState"></div>
+      </div>
+    </div>
+    <button id="gUnlock" class="primary block" style="display:none; margin-top:14px">Mở khóa YouTube ngay</button>
   </div>
-  <div class="row" style="margin-top:8px">
-    <select id="addGroup" class="grow" aria-label="Thêm vào nhóm"></select>
-    <button id="addBtn" class="primary">Thêm / Tìm</button>
+  <div class="note" style="text-align:center; margin-top:8px" id="todayNote"></div>
+</section>
+
+<!-- ===================== NỘI DUNG ===================== -->
+<section class="tab" id="tab-content" data-title="Nội dung">
+  <div class="card stack" style="margin-top:8px">
+    <div class="card-title">Thêm kênh</div>
+    <input id="addInput" type="text" placeholder="Link kênh, @tênkênh, hoặc từ khóa để tìm" autocomplete="off" autocapitalize="off">
+    <div class="row">
+      <select id="addGroup" class="grow" aria-label="Thêm vào nhóm"></select>
+      <button id="addBtn" class="primary">Thêm</button>
+    </div>
+    <div class="item" style="padding:0">
+      <div class="label">Tìm an toàn<div class="sub" id="searchInfo">Ẩn nội dung người lớn khi tìm</div></div>
+      <input type="checkbox" class="switch" id="safeSearch">
+    </div>
+    <div id="searchResults"></div>
   </div>
-  <label class="row" style="margin-top:10px; font-size:14px"><input type="checkbox" id="safeSearch" style="width:20px;height:20px">Tìm an toàn (ẩn nội dung người lớn)</label>
-  <div class="sub" id="searchInfo" style="margin-top:6px"></div>
-  <div id="searchResults" style="margin-top:4px"></div>
-</div>
 
-<h2>Nhóm</h2>
-<div id="groups"></div>
-<button id="newGroup" style="width:100%; border-style:dashed; color:var(--accent)">+ Nhóm mới</button>
-
-<h2>Kênh</h2>
-<div class="card" id="channels"></div>
-
-<h2>Giờ xem &amp; chặn</h2>
-<div class="card stack">
-  <div class="sub" id="usageToday"></div>
-  <div class="row" id="usageReset" style="flex-wrap:wrap; gap:8px"></div>
-  <label class="field">Tên gọi con trên màn chặn<input type="text" id="gChildName" maxlength="24" placeholder="vd. Khoa (để trống = tên profile trẻ em)" autocomplete="off"></label>
-  <label class="row" style="font-size:14px"><input type="checkbox" id="gBlockShorts" style="width:20px;height:20px">Chặn YouTube Shorts trong app YouTube</label>
-  <label class="field">Coi là Shorts khi video trong YouTube ngắn hơn
-    <select id="gMaxSec">
-      <option value="60">1 phút</option>
-      <option value="90">1 phút 30 giây</option>
-      <option value="120">2 phút</option>
-      <option value="180">3 phút</option>
-    </select>
-  </label>
-  <div class="note">YouTube trên tivi không cho biết video nào là Shorts, nên FamTube đoán theo thời lượng. Video thường ngắn hơn mức này (vd. bài hát ngắn) mở trong YouTube cũng bị chặn.</div>
-  <div class="grid2" id="gShortsBox">
-    <label class="field">Nhắc bao nhiêu lần rồi khóa<input type="number" min="0" max="10" id="gWarnings"></label>
-    <label class="field">Khóa YouTube (phút)<input type="number" min="1" max="1440" id="gLockMin"></label>
+  <div class="seg" role="tablist" style="margin:18px 0 12px" id="contentSeg">
+    <button aria-pressed="true" data-seg="groups">Nhóm</button>
+    <button aria-pressed="false" data-seg="channels">Kênh</button>
   </div>
-  <div class="sub" id="gShortsState"></div>
-  <button id="gUnlock" style="display:none">Mở khóa YouTube ngay</button>
-  <label class="row" style="font-size:14px"><input type="checkbox" id="gAllowDirect" style="width:20px;height:20px">Cho mở YouTube trực tiếp (không qua FamTube)</label>
-  <div class="note" id="gModeNote"></div>
-  <div id="gDirectBox" class="stack">
-    <div class="field">Giới hạn khi mở YouTube trực tiếp <span class="note">(0 = không giới hạn)</span></div>
-    <div class="grid2">
-      <label class="field">Ngày thường (phút)<input type="number" min="0" max="1440" id="gDaily"></label>
-      <label class="field">Cuối tuần (phút)<input type="number" min="0" max="1440" id="gWeekend"></label>
-      <label class="field">Được xem từ<input type="time" id="gStart"></label>
-      <label class="field">Đến<input type="time" id="gEnd"></label>
+  <div id="seg-groups">
+    <div id="groups"></div>
+    <button id="newGroup" class="dashed">+ Nhóm mới</button>
+  </div>
+  <div id="seg-channels" style="display:none">
+    <div class="card" id="channels"></div>
+  </div>
+</section>
+
+<!-- ===================== PROFILE ===================== -->
+<section class="tab" id="tab-profiles" data-title="Profile">
+  <div id="editor" class="card stack" style="margin-top:8px">
+    <div class="card-title" id="edTitle"></div>
+    <div class="crop" id="edCrop"><canvas id="edCanvas"></canvas><div class="ring2" id="edRing"></div><div class="dim" id="edDim"></div></div>
+    <label class="field" id="edZoomWrap">Phóng to<input type="range" id="edZoom" min="100" max="250" value="100"></label>
+    <label class="field" id="edBlurWrap">Độ mờ<input type="range" id="edBlur" min="0" max="20" value="6"></label>
+    <label class="field" id="edDimWrap">Độ tối<input type="range" id="edDimR" min="0" max="90" step="5" value="55"></label>
+    <div class="grid2"><button id="edCancel">Hủy</button><button id="edSave" class="primary">Lưu ảnh</button></div>
+  </div>
+  <div id="profiles" style="margin-top:8px"></div>
+  <button id="newProfile" class="dashed">+ Thêm profile</button>
+</section>
+
+<!-- ===================== CÀI ĐẶT ===================== -->
+<section class="tab" id="tab-settings" data-title="Cài đặt">
+  <div class="section-title">Chặn Shorts trong app YouTube</div>
+  <div class="card list">
+    <div class="item">
+      <div class="label">Chặn YouTube Shorts<div class="sub">Nhắc rồi khóa khi con vào Shorts</div></div>
+      <input type="checkbox" class="switch" id="gBlockShorts">
+    </div>
+    <div class="item" id="gShortsBox" style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+      <label class="field">Nhắc mấy lần rồi khóa<input type="number" inputmode="numeric" min="0" max="10" id="gWarnings"></label>
+      <label class="field">Khóa bao lâu (phút)<input type="number" inputmode="numeric" min="1" max="1440" id="gLockMin"></label>
+    </div>
+    <div class="item" style="display:block">
+      <label class="field">Coi là Shorts khi video ngắn hơn
+        <select id="gMaxSec">
+          <option value="60">1 phút</option>
+          <option value="90">1 phút 30 giây</option>
+          <option value="120">2 phút</option>
+          <option value="180">3 phút</option>
+        </select>
+      </label>
+      <div class="note" style="margin-top:6px">YouTube trên tivi không báo video nào là Shorts nên FamTube đoán theo độ dài. Video thường ngắn hơn mức này cũng bị chặn.</div>
+    </div>
+    <div class="item" style="display:block">
+      <label class="field">Tên gọi con trên màn chặn<input type="text" id="gChildName" maxlength="24" placeholder="vd. Khoa" autocomplete="off"></label>
     </div>
   </div>
-  <button id="gSave" class="primary">Lưu giờ xem &amp; chặn</button>
-  <details>
-    <summary class="sub">Nhận diện Shorts (nâng cao)</summary>
-    <div class="stack" style="margin-top:8px">
+
+  <div class="section-title">Mở YouTube không qua FamTube</div>
+  <div class="card list">
+    <div class="item">
+      <div class="label">Cho mở trực tiếp, có tính giờ<div class="sub" id="gModeNote"></div></div>
+      <input type="checkbox" class="switch" id="gAllowDirect">
+    </div>
+    <div id="gDirectBox" style="padding-top:12px; border-top:1px solid var(--line)">
+      <div class="grid2">
+        <label class="field">Ngày thường (phút)<input type="number" inputmode="numeric" min="0" max="1440" id="gDaily" placeholder="0"></label>
+        <label class="field">Cuối tuần (phút)<input type="number" inputmode="numeric" min="0" max="1440" id="gWeekend"></label>
+        <label class="field">Được xem từ<input type="time" id="gStart"></label>
+        <label class="field">Đến<input type="time" id="gEnd"></label>
+      </div>
+      <div class="note" style="margin-top:8px">0 phút = không giới hạn · Để trống giờ = cả ngày.</div>
+    </div>
+  </div>
+  <button id="gSave" class="primary block">Lưu cài đặt chặn</button>
+  <details style="margin:10px 4px 0">
+    <summary>Nhận diện Shorts (nâng cao)</summary>
+    <div class="card stack" style="margin-top:8px">
       <label class="field">Từ khóa nhận diện (cách nhau dấu phẩy)<input type="text" id="gMarkers" autocomplete="off"></label>
-      <div class="note">Mở Shorts trên tivi rồi bấm “Xem nhật ký” để biết YouTube báo gì. Dòng “CHẶN” là lúc FamTube đã kéo về.</div>
+      <div class="note">Mở Shorts trên tivi rồi bấm “Xem nhật ký”. Dòng “CHẶN” là lúc FamTube đã xử lý.</div>
       <button id="gLogBtn">Xem nhật ký</button>
       <pre id="gLog" style="white-space:pre-wrap; font-size:12px; max-height:260px; overflow:auto; margin:0"></pre>
     </div>
   </details>
-</div>
 
-<h2>Lọc Shorts trong FamTube</h2>
-<div class="card">
-  <select id="minDur" aria-label="Ẩn video ngắn hơn">
-    <option value="0">Không lọc</option>
-    <option value="60">Ẩn video dưới 1 phút</option>
-    <option value="120">Ẩn video dưới 2 phút</option>
-    <option value="180">Ẩn video dưới 3 phút</option>
-    <option value="300">Ẩn video dưới 5 phút</option>
-  </select>
-</div>
-
-<h2>Mã PIN</h2>
-<div class="card">
-  <div class="sub" id="pinState" style="margin-bottom:8px"></div>
-  <div class="row">
-    <input id="pin" inputmode="numeric" maxlength="4" pattern="[0-9]*" class="grow" placeholder="4 chữ số" aria-label="Mã PIN mới" autocomplete="off">
-    <button id="pinBtn">Đặt PIN</button>
+  <div class="section-title">Trong FamTube</div>
+  <div class="card list">
+    <div class="item" style="display:block">
+      <label class="field">Ẩn video ngắn
+        <select id="minDur" aria-label="Ẩn video ngắn hơn">
+          <option value="0">Không lọc</option>
+          <option value="60">Ẩn video dưới 1 phút</option>
+          <option value="120">Ẩn video dưới 2 phút</option>
+          <option value="180">Ẩn video dưới 3 phút</option>
+          <option value="300">Ẩn video dưới 5 phút</option>
+        </select>
+      </label>
+    </div>
+    <div class="item" style="display:block">
+      <div class="field">Mã PIN bố mẹ<span class="note" id="pinState"></span></div>
+      <div class="row" style="margin-top:6px">
+        <input id="pin" inputmode="numeric" maxlength="4" pattern="[0-9]*" class="grow" placeholder="4 chữ số mới" aria-label="Mã PIN mới" autocomplete="off">
+        <button id="pinBtn">Đặt PIN</button>
+      </div>
+    </div>
   </div>
-</div>
 
-<h2>Quản lý online</h2>
-<div class="card stack">
-  <div class="sub" id="remoteInfo"></div>
-  <div class="note">Chỉnh tivi từ bất cứ đâu, không cần nhập PIN trên tivi. Tạo token trên GitHub: Settings → Developer settings → Fine-grained tokens → Generate. Repository access: chỉ repo <b id="remoteRepo"></b>; Permissions → Contents: Read and write. Dán token vào đây (cho tivi) và vào trang online (cho điện thoại).</div>
-  <div class="row" id="remoteTokenRow">
-    <input type="text" id="remoteToken" class="grow" placeholder="github_pat_…" autocomplete="off">
-    <button id="remoteTokenBtn">Lưu cho tivi</button>
+  <div class="section-title">Quản lý online</div>
+  <div class="card stack">
+    <div class="sub" id="remoteInfo"></div>
+    <div class="row" id="remoteTokenRow">
+      <input type="text" id="remoteToken" class="grow" placeholder="github_pat_…" autocomplete="off">
+      <button id="remoteTokenBtn">Lưu</button>
+    </div>
+    <a id="remoteLink" target="_blank" rel="noopener" style="color:var(--accent); font-size:14px; font-weight:600; text-decoration:none"></a>
+    <details>
+      <summary>Cách tạo token</summary>
+      <div class="note" style="margin-top:6px">GitHub → Settings → Developer settings → Fine-grained tokens → Generate. Repository access: chỉ repo <b id="remoteRepo"></b>; Permissions → Contents: Read and write.</div>
+    </details>
   </div>
-  <a id="remoteLink" target="_blank" rel="noopener" style="color:var(--accent); font-size:14px"></a>
+
+  <div class="section-title">Sao lưu</div>
+  <div class="card stack">
+    <div id="cloudBackup" class="stack" style="display:none">
+      <div class="stat"><div class="ico">☁️</div><div class="grow"><div class="card-title">Sao lưu trên GitHub</div><div class="sub" id="cloudState"></div></div></div>
+      <div class="grid2"><button id="cloudBackupBtn">Sao lưu ngay</button><button id="cloudRestoreBtn">Khôi phục</button></div>
+    </div>
+    <div class="stat"><div class="ico">📄</div><div class="grow"><div class="card-title">File trên điện thoại</div><div class="sub">Tải về hoặc khôi phục từ file</div></div></div>
+    <div class="grid2"><button id="backupBtn">Tải file</button><button id="restoreBtn">Khôi phục</button></div>
+    <div class="note">Gồm kênh, nhóm, profile và cài đặt. Không gồm ảnh đại diện, hình nền.</div>
+  </div>
+  <div class="note" id="ver" style="text-align:center; margin:18px 0 4px"></div>
+</section>
+</main>
+
+<div class="savebar" id="saveBar">
+  <span id="saveBarText">Có thay đổi chưa lưu</span>
+  <button id="save" class="primary" style="display:none">Lưu nhóm</button>
+  <button id="saveProfiles" class="primary" style="display:none">Lưu profile</button>
 </div>
 
-<h2>Sao lưu</h2>
-<div class="card stack">
-  <div class="note">Lưu toàn bộ kênh, nhóm, profile và cài đặt thành một file trên điện thoại. Ảnh đại diện và hình nền không nằm trong file sao lưu.</div>
-  <div class="grid2"><button id="backupBtn">Tải bản sao lưu</button><button id="restoreBtn">Khôi phục từ file</button></div>
-</div>
+<nav class="tabbar" role="tablist">
+  <button role="tab" data-tab="today" aria-selected="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Hôm nay</button>
+  <button role="tab" data-tab="content" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="3"/><path d="M10.5 9.5v4.5l4-2.25z" fill="currentColor"/></svg>Nội dung</button>
+  <button role="tab" data-tab="profiles" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.4.2 4 1.8 4.5 4.5"/></svg>Profile</button>
+  <button role="tab" data-tab="settings" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Cài đặt</button>
+</nav>
 
-<div class="bar"><button id="save" class="primary" disabled>Lưu nhóm</button></div>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="busy" role="status" aria-live="polite"><span class="spin"></span><span id="busyText"></span></div>
 
-<!-- Chỉ có trên trang online (GitHub Pages): địa chỉ Supabase. Trên tivi file này không có. -->
+<!-- Chỉ có trên trang online (GitHub Pages): repo hộp thư lệnh. Trên tivi file này không có. -->
 <script src="config.js"></script>
 <script>
 const token = new URLSearchParams(location.search).get('t') || '';
@@ -351,7 +506,12 @@ function toast(msg, isErr) {
   toastTimer = setTimeout(() => (t.style.display = 'none'), 3000);
 }
 
-function setDirty(v) { dirty = v; $('save').disabled = !v; }
+function updateSaveBar() {
+  $('save').style.display = dirty ? '' : 'none';
+  $('saveProfiles').style.display = profilesDirty ? '' : 'none';
+  $('saveBar').classList.toggle('show', dirty || profilesDirty);
+}
+function setDirty(v) { dirty = v; updateSaveBar(); }
 
 async function load() {
   try {
@@ -380,10 +540,10 @@ function render() {
         <button class="icon" data-act="down" ${i === groups.length - 1 ? 'disabled' : ''} aria-label="Xuống">↓</button>
       </div>
       <div class="row" style="margin-top:8px">
-        <button class="pill" data-act="hidden" aria-pressed="${g.hidden}">Ẩn</button>
-        <button class="pill lock" data-act="locked" aria-pressed="${g.locked}">Khóa</button>
+        <button class="pill" data-act="hidden" aria-pressed="${g.hidden}">Ẩn khỏi tivi</button>
+        <button class="pill lock" data-act="locked" aria-pressed="${g.locked}">Cần PIN</button>
         <span class="grow"></span>
-        <button class="pill" data-act="del">Xóa nhóm</button>
+        <button class="pill" data-act="del">Xóa</button>
       </div>
       <details>
         <summary>${g.channelIds.length} kênh trong nhóm</summary>
@@ -399,16 +559,16 @@ function render() {
       ${c.thumbnailUrl ? `<img src="${esc(c.thumbnailUrl)}" alt="">` : '<div class="ph"></div>'}
       <div class="grow"><div class="name">${esc(c.title)}</div>
         <div class="sub">${esc(cfg.groups.filter((g) => g.channelIds.includes(c.id)).map((g) => g.name).join(', ') || 'Chưa thuộc nhóm nào')}</div></div>
-      <button class="pill" data-del="${esc(c.id)}" data-name="${esc(c.title)}">Xóa</button>
+      <button class="icon" data-del="${esc(c.id)}" data-name="${esc(c.title)}" aria-label="Xóa kênh">✕</button>
     </div>`).join('') : '<div class="empty">Chưa có kênh nào. Thêm kênh ở trên.</div>';
 
   renderRemote();
-  $('ver').textContent = cfg.version ? `Đang chạy FamTube ${cfg.version} (bản dựng ${cfg.build})` : '';
+  $('ver').textContent = cfg.version ? `FamTube ${cfg.version} · bản dựng ${cfg.build}` : '';
   $('minDur').value = String(cfg.minDurationSec);
   if (!$('minDur').value) $('minDur').value = '180';
   $('safeSearch').checked = cfg.safeSearch !== false;
   renderGuard();
-  $('pinState').textContent = cfg.hasPin ? 'Đã đặt PIN. Nhập mã mới để đổi.' : 'Chưa đặt PIN. Nhóm khóa và Cài đặt cần PIN để bảo vệ.';
+  $('pinState').textContent = cfg.hasPin ? 'Đã đặt · nhập mã mới để đổi' : 'Chưa đặt · nên đặt để con không tự mở khóa';
 }
 
 function fmtSubs(n) {
@@ -427,7 +587,7 @@ function looksDirect(s) {
 }
 
 function renderSearch(channels, remaining) {
-  $('searchInfo').textContent = `Còn khoảng ${remaining} lượt tìm hôm nay · Tìm an toàn ${cfg.safeSearch !== false ? 'đang bật' : 'đang tắt'}`;
+  $('searchInfo').textContent = `Ẩn nội dung người lớn · còn ${remaining} lượt tìm hôm nay`;
   $('searchResults').innerHTML = channels.map((c) => `
     <div class="sr" data-id="${esc(c.id)}">
       <div class="ch">
@@ -436,7 +596,7 @@ function renderSearch(channels, remaining) {
           <div class="sub">${fmtSubs(c.subscriberCount)} người đăng ký · ${c.videoCount} video</div></div>
         <button class="pill" data-act="add" ${c.added ? 'disabled' : ''}>${c.added ? 'Đã thêm' : 'Thêm'}</button>
       </div>
-      <div class="row sr-panel" style="display:none; margin:0 0 10px">
+      <div class="row sr-panel" style="display:none; margin:0 0 12px">
         <select class="grow sr-group">${groupOptionsHtml()}</select>
         <button class="primary" data-act="confirm">Xác nhận thêm</button>
       </div>
@@ -549,37 +709,102 @@ function renderGuard() {
   $('gWarnings').value = g.shortsWarnings ?? 2;
   $('gLockMin').value = g.shortsLockMin || 15;
   const locked = g.shortsLockUntil && g.shortsLockUntil > Date.now();
-  $('gShortsState').textContent = `Hôm nay đã vào Shorts ${g.shortsStrikesToday || 0} lần` +
-    (locked ? ` · YouTube đang khóa đến ${new Date(g.shortsLockUntil).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : '');
+  const until = locked ? new Date(g.shortsLockUntil).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '';
+  $('shortsTitle').textContent = g.blockShorts === false ? 'Không chặn Shorts' : locked ? `YouTube đang khóa đến ${until}` : 'Đang chặn Shorts';
+  $('gShortsState').textContent = g.blockShorts === false ? 'Bật lại ở tab Cài đặt'
+    : `Hôm nay vào Shorts ${g.shortsStrikesToday || 0} lần · nhắc ${g.shortsWarnings ?? 2} lần rồi khóa ${g.shortsLockMin || 15} phút`;
   $('gUnlock').style.display = locked ? '' : 'none';
   updateGuardMode();
-  const u = cfg.usageToday || {};
-  const parts = (cfg.profiles || []).filter(p => p.kind === 'kid').map(p => `${p.name} ${u[p.id] || 0} phút`);
-  if (g.allowDirect || u['0']) parts.push(`YouTube trực tiếp ${u['0'] || 0} phút`);
-  $('usageToday').textContent = 'Hôm nay đã xem: ' + (parts.join(' · ') || 'chưa có');
-  // Nút "cho xem lại từ đầu" cho từng ngăn đã xem hôm nay.
-  const buckets = (cfg.profiles || []).filter(p => p.kind === 'kid').map(p => [String(p.id), p.name]);
-  buckets.push(['0', 'YouTube trực tiếp']);
-  const box = $('usageReset');
-  box.innerHTML = '';
-  for (const [id, name] of buckets) {
-    if (!u[id]) continue;
-    const btn = document.createElement('button');
-    btn.textContent = `Cho xem lại từ đầu: ${name}`;
-    btn.addEventListener('click', async () => {
-      if (!confirm(`Xóa ${u[id]} phút đã xem hôm nay của ${name}? Sẽ được xem lại đủ giới hạn ngày.`)) return;
-      try { await api('PUT', '/api/settings', { resetUsage: Number(id) }); toast('Đã đặt lại giờ xem hôm nay'); await load(); }
-      catch (e) { toast(e.message, true); }
-    });
-    box.appendChild(btn);
-  }
+  renderToday();
 }
+// ================= Hôm nay =================
+function fmtMin(m) { return m >= 60 ? `${Math.floor(m / 60)} giờ${m % 60 ? ' ' + (m % 60) + ' phút' : ''}` : `${m} phút`; }
+function renderToday() {
+  const g = cfg.guard || {};
+  const u = cfg.usageToday || {};
+  const grants = cfg.grantSec || {};
+  const weekend = [0, 6].includes(new Date().getDay());
+  const items = (cfg.profiles || []).filter((p) => p.kind === 'kid').map((p) => ({
+    id: String(p.id), name: p.name, color: p.color, avatarUrl: p.avatarUrl,
+    limit: weekend ? p.weekendLimitMin : p.dailyLimitMin, start: p.windowStart, end: p.windowEnd }));
+  if (g.allowDirect || u['0']) items.push({ id: '0', name: 'YouTube mở trực tiếp', color: '#E8EBFE', icon: '▶',
+    limit: weekend ? g.directWeekendMin : g.directDailyMin, start: g.directWindowStart, end: g.directWindowEnd });
+  $('todayKids').innerHTML = items.length ? items.map((it) => {
+    const used = u[it.id] || 0;
+    const left = it.limit > 0 ? Math.max(0, it.limit - used) : null;
+    const grant = Math.ceil((grants[it.id] || 0) / 60);
+    const pct = it.limit > 0 ? Math.min(100, Math.round(used / it.limit * 100)) : 0;
+    const over = left === 0 && !grant;
+    const color = over ? 'var(--danger)' : pct >= 80 ? 'var(--warm)' : 'var(--accent)';
+    const badge = grant ? `<span class="badge info">Đang được thêm · còn ${grant} phút</span>`
+      : it.limit <= 0 ? '<span class="badge">Không giới hạn</span>'
+      : over ? '<span class="badge warn">Hết giờ hôm nay</span>'
+      : `<span class="badge">Còn ${fmtMin(left)}</span>`;
+    const inner = it.avatarUrl ? `<img src="${esc(it.avatarUrl)}" alt="">` : esc(it.icon || (it.name || '?').trim().charAt(0).toUpperCase());
+    const win = it.start && it.end ? ` · xem từ ${esc(it.start)} đến ${esc(it.end)}` : '';
+    return `<div class="card" data-bucket="${it.id}">
+      <div class="kid">
+        <div class="ring" style="--p:${pct}; --c:${color}"><div style="background:${esc(it.color || '#fff')}">${inner}</div></div>
+        <div class="grow">
+          <div class="sub" style="font-weight:600; color:var(--ink)">${esc(it.name)}</div>
+          <div class="big">${used} <small>/ ${it.limit > 0 ? it.limit + ' phút' : '∞'}</small></div>
+          ${badge}
+        </div>
+      </div>
+      ${it.limit > 0 || win ? `<div class="note" style="margin-top:10px">${weekend ? 'Cuối tuần' : 'Ngày thường'}${it.limit > 0 ? ': ' + it.limit + ' phút' : ''}${win}</div>` : ''}
+      <div class="actions">
+        <button data-today="grant">+ 15 phút</button>
+        <button data-today="reset" ${used ? '' : 'disabled'}>Xem lại từ đầu</button>
+      </div>
+    </div>`;
+  }).join('') : '<div class="card empty">Chưa có profile trẻ em. Thêm ở tab Profile.</div>';
+  $('todayNote').textContent = cfg.adultActive ? 'Người lớn đang dùng YouTube tự do trên tivi (không tính giờ, không chặn Shorts).' : '';
+}
+$('todayKids').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-today]');
+  if (!btn) return;
+  const id = Number(btn.closest('[data-bucket]').dataset.bucket);
+  const name = btn.closest('.card').querySelector('.sub').textContent;
+  try {
+    if (btn.dataset.today === 'grant') {
+      await api('PUT', '/api/settings', { grant: id });
+      toast(`Đã cho ${name} thêm 15 phút`);
+    } else {
+      if (!confirm(`Xóa số phút ${name} đã xem hôm nay? Sẽ được xem lại đủ giới hạn ngày.`)) return;
+      await api('PUT', '/api/settings', { resetUsage: id });
+      toast('Đã cho xem lại từ đầu');
+    }
+    await load();
+  } catch (err) { toast(err.message, true); }
+});
+
+// ================= Tab & thanh chọn =================
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.id === 'tab-' + name));
+  document.querySelectorAll('nav.tabbar button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  $('pageTitle').textContent = $('tab-' + name).dataset.title;
+  window.scrollTo(0, 0);
+  store('famtubeTab', name);
+}
+document.querySelectorAll('nav.tabbar button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+$('contentSeg').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-seg]');
+  if (!b) return;
+  $('contentSeg').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  $('seg-groups').style.display = b.dataset.seg === 'groups' ? '' : 'none';
+  $('seg-channels').style.display = b.dataset.seg === 'channels' ? '' : 'none';
+});
+function setConn(state, text) {
+  $('remoteState').className = 'chip ' + (state || '');
+  $('remoteStateText').textContent = text;
+}
+
 function updateGuardMode() {
   const on = $('gAllowDirect').checked;
   $('gDirectBox').style.display = on ? '' : 'none';
   $('gModeNote').textContent = on
-    ? 'Mở YouTube trực tiếp được nhưng tính giờ theo giới hạn dưới đây (giờ riêng, không trừ vào giờ của profile trẻ em). Người lớn nhập PIN trên tivi để dùng tự do 2 giờ.'
-    : 'Mở YouTube không qua FamTube sẽ bị kéo về. Người lớn nhập PIN trên tivi để dùng YouTube tự do 2 giờ.';
+    ? 'Tính giờ riêng theo giới hạn dưới đây'
+    : 'Đang tắt: mở YouTube sẽ bị kéo về FamTube';
 }
 $('gAllowDirect').addEventListener('change', updateGuardMode);
 $('gSave').addEventListener('click', async () => {
@@ -637,7 +862,7 @@ $('pinBtn').addEventListener('click', async () => {
 const COLORS = ['#B4A8FC', '#D88689', '#8C78F3', '#E4E6F8', '#2741F1'];
 let profiles = [];
 let profilesDirty = false;
-function setProfilesDirty(v) { profilesDirty = v; $('saveProfiles').disabled = !v; }
+function setProfilesDirty(v) { profilesDirty = v; updateSaveBar(); }
 
 function avatarHtml(p) {
   return `<div class="avatar" style="background:${esc(p.color)}">${p.avatarUrl ? `<img src="${esc(p.avatarUrl)}" alt="">` : esc((p.name || '?').trim().charAt(0).toUpperCase() || '?')}</div>`;
@@ -652,7 +877,7 @@ function renderProfiles() {
       <div class="pf-head">
         ${avatarHtml(p)}
         <input type="text" value="${esc(p.name)}" data-pf="name" aria-label="Tên profile" class="grow">
-        <button class="pill" data-pf="del">Xóa</button>
+        <button class="icon" data-pf="del" aria-label="Xóa profile">✕</button>
       </div>
       <div class="seg" role="group" aria-label="Loại profile">
         <button data-pf="adult" aria-pressed="${!kid}">Người lớn</button>
@@ -666,7 +891,7 @@ function renderProfiles() {
         <div class="checks">${cfg.groups.length ? cfg.groups.map((g) => `
           <label><input type="checkbox" data-pf="group" value="${g.id}" ${p.groupIds.includes(g.id) ? 'checked' : ''}>${esc(g.name)}${g.hidden ? ' (ẩn)' : ''}${g.locked ? ' (khóa)' : ''}</label>`).join('') : '<div class="empty">Chưa có nhóm nào</div>'}</div>
       </div>
-      <div class="field">Giới hạn thời gian <span class="note">(0 = không giới hạn · Chặt: hết giờ là dừng ngay · Nhẹ: xem nốt video)</span></div>
+      <div class="field">Giới hạn thời gian</div>
       <div class="grid2">
         <label class="field">Ngày thường${limitSelect('dailyLimitMin', p.dailyLimitMin)}</label>
         <label class="field">Cuối tuần${limitSelect('weekendLimitMin', p.weekendLimitMin)}</label>
@@ -676,9 +901,9 @@ function renderProfiles() {
         <label class="field">Đến<input type="time" data-pf="windowEnd" value="${esc(p.windowEnd)}"></label>
       </div>
       <div class="field">Khi hết giờ
-        <div class="seg"><button data-pf="soft" aria-pressed="${!p.strictLimit}">Nhẹ</button><button data-pf="strict" aria-pressed="${p.strictLimit}">Chặt</button></div>
+        <div class="seg"><button data-pf="soft" aria-pressed="${!p.strictLimit}">Xem nốt video</button><button data-pf="strict" aria-pressed="${p.strictLimit}">Dừng ngay</button></div>
       </div>` : `
-      <label class="row" style="font-size:15px"><input type="checkbox" data-pf="pin" ${p.pinRequired ? 'checked' : ''} style="width:20px;height:20px">Cần PIN khi vào profile này</label>`}
+      <div class="item" style="padding:0"><div class="label">Cần PIN khi vào profile này</div><input type="checkbox" class="switch" data-pf="pin" ${p.pinRequired ? 'checked' : ''}></div>`}
       <div class="field">Ảnh
         ${saved ? `<div class="grid2">
           <button data-pf="avatar">${p.avatarUrl ? 'Đổi ảnh đại diện' : 'Chọn ảnh đại diện'}</button>
@@ -875,11 +1100,24 @@ function applyConfig(c) {
 }
 function renderRemote() {
   $('remoteRepo').textContent = cfg.remoteRepo || '';
-  $('remoteInfo').textContent = REMOTE ? 'Đang dùng trang online.'
-    : (cfg.remoteEnabled ? 'Đang bật trên tivi.' : 'Chưa bật: tivi chưa có token.');
+  $('remoteInfo').textContent = REMOTE ? 'Bạn đang dùng trang online.'
+    : (cfg.remoteEnabled ? 'Đang bật trên tivi. Nhập token mới để đổi.' : 'Chưa bật: dán token GitHub để chỉnh tivi từ xa.');
   $('remoteTokenRow').style.display = REMOTE ? 'none' : '';
-  if (cfg.remotePage && !REMOTE) { $('remoteLink').href = cfg.remotePage; $('remoteLink').textContent = 'Mở trang online: ' + cfg.remotePage; }
+  if (cfg.remotePage && !REMOTE) { $('remoteLink').href = cfg.remotePage; $('remoteLink').textContent = 'Mở trang online ›'; }
+  $('cloudBackup').style.display = cfg.remoteEnabled ? '' : 'none';
+  $('cloudState').textContent = cfg.lastBackupAt
+    ? 'Tự sao lưu lên GitHub khi có thay đổi · lần cuối ' + new Date(cfg.lastBackupAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+    : 'Tự sao lưu lên GitHub khi có thay đổi · chưa có bản nào';
 }
+$('cloudBackupBtn').addEventListener('click', async () => {
+  try { await api('PUT', '/api/settings', { backupNow: true }); toast('Đã sao lưu lên GitHub'); await load(); }
+  catch (e) { toast(e.message, true); }
+});
+$('cloudRestoreBtn').addEventListener('click', async () => {
+  if (!confirm('Khôi phục bản sao lưu trên GitHub? Toàn bộ kênh, nhóm, profile và cài đặt hiện tại trên tivi sẽ bị ghi đè.')) return;
+  try { await api('POST', '/api/restore-github'); toast('Đã khôi phục từ GitHub'); await load(); }
+  catch (e) { toast(e.message, true); }
+});
 $('remoteTokenBtn').addEventListener('click', async () => {
   try {
     await api('PUT', '/api/settings', { remoteToken: $('remoteToken').value.trim() });
@@ -889,8 +1127,14 @@ $('remoteTokenBtn').addEventListener('click', async () => {
   } catch (e) { toast(e.message, true); }
 });
 async function start() {
-  if (!REMOTE) return load();
-  $('remoteState').style.display = '';
+  const tab = store('famtubeTab');
+  if (tab && $('tab-' + tab)) showTab(tab);
+  if (!REMOTE) {
+    setConn('', 'Đang kết nối…');
+    await load();
+    setConn(cfg.version ? 'on' : 'off', cfg.version ? 'Cùng wifi với tivi' : 'Không kết nối được tivi');
+    return;
+  }
   // Link cài đặt sẵn: ...#token=<token> (phần # không gửi lên máy chủ). Giữ nguyên trên thanh địa chỉ:
   // iPhone "Thêm vào màn hình chính" có bộ nhớ riêng, chỉ mang theo được token nằm trong link.
   const hashToken = new URLSearchParams(location.hash.slice(1)).get('token');
@@ -908,15 +1152,16 @@ async function start() {
   }
   const cached = store(CONFIG_CACHE_STORE);
   if (cached) { try { applyConfig(JSON.parse(cached)); } catch {} }
-  $('remoteState').textContent = 'Quản lý online · đang hỏi tivi…';
+  setConn('', 'Đang hỏi tivi…');
   try {
     const c = await api('GET', '/api/config');
     store(CONFIG_CACHE_STORE, JSON.stringify(c));
     applyConfig(c);
-    $('remoteState').textContent = 'Quản lý online · tivi đang bật';
+    setConn('on', 'Tivi đang bật');
   } catch (e) {
     reportError('start', e);
-    $('remoteState').textContent = 'Quản lý online · ' + e.message;
+    setConn('off', /không trả lời/.test(e.message) ? 'Tivi đang tắt' : 'Lỗi kết nối');
+    toast(e.message, true);
     if (/Token GitHub/.test(e.message)) { store(REMOTE_TOKEN_STORE, null); toast(e.message, true); start(); }
   }
 }
