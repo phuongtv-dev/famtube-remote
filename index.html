@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light">
 <title>FamTube – Quản lý</title>
 <style>
@@ -38,6 +38,8 @@
   .bar button { width:100%; height:50px; font-size:16px; }
   #toast { position:fixed; left:16px; right:16px; bottom:calc(84px + env(safe-area-inset-bottom)); background:var(--ink); color:#fff; padding:12px 14px; border-radius:12px; font-size:14px; display:none; }
   #toast.err { background:#8A2E35; }
+  /* iPhone tự phóng to khi chạm ô nhập có chữ nhỏ hơn 16px: giữ mọi ô nhập ở 16px. */
+  input, select, textarea { font-size:16px !important; }
   #busy { position:fixed; left:0; right:0; top:0; z-index:50; display:none; align-items:center; gap:10px; justify-content:center;
           padding:max(10px,env(safe-area-inset-top)) 16px 10px; background:var(--accent); color:#fff; font-size:14px; font-weight:600; }
   #busy .spin { width:16px; height:16px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
