@@ -825,9 +825,10 @@ $('remoteTokenBtn').addEventListener('click', async () => {
 async function start() {
   if (!REMOTE) return load();
   $('remoteState').style.display = '';
-  // Link cài đặt sẵn: ...#token=<token>. Lưu vào máy rồi xóa khỏi thanh địa chỉ (phần # không gửi lên máy chủ).
+  // Link cài đặt sẵn: ...#token=<token> (phần # không gửi lên máy chủ). Giữ nguyên trên thanh địa chỉ:
+  // iPhone "Thêm vào màn hình chính" có bộ nhớ riêng, chỉ mang theo được token nằm trong link.
   const hashToken = new URLSearchParams(location.hash.slice(1)).get('token');
-  if (hashToken) { store(REMOTE_TOKEN_STORE, hashToken); history.replaceState(null, '', location.pathname); }
+  if (hashToken) store(REMOTE_TOKEN_STORE, hashToken);
   if (!store(REMOTE_TOKEN_STORE)) {
     $('tokenGate').style.display = '';
     $('gateBtn').onclick = () => {
