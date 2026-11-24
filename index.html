@@ -231,6 +231,7 @@
       </div>
     </div>
     <button id="gUnlock" class="primary block" style="display:none; margin-top:14px">Mở khóa YouTube ngay</button>
+    <button id="gShortsReset" class="block" style="display:none; margin-top:10px">Đặt lại số lần vào Shorts</button>
   </div>
   <div class="note" style="text-align:center; margin-top:8px" id="todayNote"></div>
 </section>
@@ -804,6 +805,9 @@ function renderGuard() {
   $('gShortsState').textContent = g.blockShorts === false ? 'Bật lại ở tab Cài đặt'
     : `Hôm nay vào Shorts ${g.shortsStrikesToday || 0} lần · nhắc ${g.shortsWarnings ?? 2} lần rồi khóa ${g.shortsLockMin || 15} phút`;
   $('gUnlock').style.display = locked ? '' : 'none';
+  // Chưa bị khóa nhưng đã có lần nhắc (vd. bị báo nhầm): cho đặt lại về 0.
+  $('gShortsReset').style.display = !locked && g.shortsStrikesToday ? '' : 'none';
+  $('gShortsReset').textContent = `Đặt lại số lần vào Shorts (đang ${g.shortsStrikesToday || 0} lần)`;
   updateGuardMode();
   renderToday();
 }
@@ -1119,6 +1123,10 @@ $('gSave').addEventListener('click', async () => {
     shortsLockMin: Number($('gLockMin').value) || 15
   };
   try { await api('PUT', '/api/settings', { guard }); toast('Đã lưu lên tivi'); await load(); }
+  catch (e) { toast(e.message, true); }
+});
+$('gShortsReset').addEventListener('click', async () => {
+  try { await api('PUT', '/api/settings', { clearShortsLock: true }); toast('Đã đặt lại số lần vào Shorts về 0'); await load(); }
   catch (e) { toast(e.message, true); }
 });
 $('gUnlock').addEventListener('click', async () => {
