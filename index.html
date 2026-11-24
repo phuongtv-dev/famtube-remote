@@ -146,6 +146,12 @@
   .locked-banner { background:var(--warm-soft); color:var(--danger); border-radius:14px; padding:12px 14px; font-weight:600; font-size:14px;
                    display:flex; align-items:center; gap:10px; }
   .hist .item { padding:8px 0; min-height:0; }
+  .kw { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 6px 0 12px; border-radius:999px; background:var(--warm-soft); color:var(--danger); font-size:13px; font-weight:600; }
+  .kw button { width:24px; height:24px; padding:0; border-radius:50%; background:rgba(194,65,75,.15); color:var(--danger); font-size:13px; }
+  .days { display:flex; gap:4px; flex-wrap:wrap; }
+  .days button { width:38px; height:32px; padding:0; border-radius:10px; font-size:12.5px; background:rgba(27,26,61,.06); color:var(--muted); }
+  .days button[aria-pressed=true] { background:var(--ink); color:#fff; }
+  .sched { border:1px solid var(--line2); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:10px; background:rgba(255,255,255,.45); }
   .approve { background:linear-gradient(135deg,rgba(216,134,137,.35),rgba(255,255,255,.6)); border:1.5px solid rgba(216,134,137,.7);
              animation:pulse 2s ease-in-out infinite; }
   @keyframes pulse { 50% { box-shadow:0 8px 32px rgba(216,134,137,.45); } }
@@ -319,6 +325,53 @@
     <button id="unblkApply" class="block" style="display:none"></button>
   </div>
 
+  <div class="section-title">Chặn theo từ khóa</div>
+  <div class="card stack">
+    <div class="note">Tên video hoặc tên kênh có từ này thì tivi tự thoát video (không phân biệt dấu, hoa thường). Ví dụ “kinh di” chặn cả “Kinh Dị”.</div>
+    <div class="chips" id="kwList"></div>
+    <div class="row"><input type="text" id="kwInput" class="grow" placeholder="Thêm từ, vd. GTA" autocomplete="off"><button id="kwAdd">Thêm</button></div>
+    <div class="field">Gợi ý <span class="note">(bấm để thêm)</span></div>
+    <div class="chips" id="kwSuggest"></div>
+  </div>
+
+  <div class="section-title">Lịch tự động</div>
+  <div class="card stack">
+    <div class="note"><b>Khóa tivi</b>: mọi app bị chặn (vd. giờ ngủ). <b>Giờ học</b>: chỉ xem được các nhóm học trong FamTube, YouTube và app khác bị chặn.</div>
+    <div id="schedList" class="stack"></div>
+    <div class="grid2"><button id="schedSleep">+ Giờ ngủ</button><button id="schedStudy">+ Giờ học</button></div>
+  </div>
+
+  <div class="section-title">Nghỉ mắt</div>
+  <div class="card list">
+    <div class="item" style="display:block">
+      <div class="grid2">
+        <label class="field">Xem liền bao lâu
+          <select id="brEvery"><option value="0">Tắt</option><option value="20">20 phút</option><option value="30">30 phút</option><option value="45">45 phút</option><option value="60">60 phút</option></select></label>
+        <label class="field">Thì nghỉ
+          <select id="brMin"><option value="3">3 phút</option><option value="5">5 phút</option><option value="10">10 phút</option><option value="15">15 phút</option></select></label>
+      </div>
+      <div class="note" style="margin-top:6px">Đến giờ nghỉ, tivi tạm dừng video và khóa vài phút, nhắc con nhìn ra xa, uống nước.</div>
+    </div>
+  </div>
+
+  <div class="section-title">Tính giờ các app khác</div>
+  <div class="card stack">
+    <div class="note">App được tích cũng tính giờ, theo giới hạn và khung giờ, và bị khóa khi hết giờ giống YouTube.</div>
+    <div id="appList" class="checks"></div>
+    <div class="item" style="padding:0">
+      <div class="label">Hỏi “Ai đang xem?” khi mở YouTube / app<div class="sub">Để tính giờ riêng từng con (nhà có từ 2 con)</div></div>
+      <input type="checkbox" class="switch" id="askWho">
+    </div>
+  </div>
+
+  <div class="section-title">Báo cáo cuối ngày</div>
+  <div class="card stack">
+    <div class="note">Gửi lên điện thoại (app ntfy): mỗi con xem bao nhiêu phút, kênh xem nhiều, số lần vào Shorts, video bị chặn.</div>
+    <div class="row"><label class="field grow">Gửi lúc<input type="time" id="repAt"></label>
+      <label class="item" style="padding:0; gap:8px; margin-top:20px"><input type="checkbox" class="switch" id="repOn"></label></div>
+    <button id="repNow">Gửi báo cáo hôm nay ngay</button>
+  </div>
+
   <div class="section-title">Mở YouTube không qua FamTube</div>
   <div class="card list">
     <div class="item">
@@ -413,6 +466,7 @@
   <span id="saveBarText">Có thay đổi chưa lưu</span>
   <button id="save" class="primary" style="display:none">Lưu nhóm</button>
   <button id="saveProfiles" class="primary" style="display:none">Lưu profile</button>
+  <button id="saveExtras" class="primary" style="display:none">Lưu luật</button>
 </div>
 
 <nav class="tabbar" role="tablist">
@@ -435,7 +489,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261124133332';
+const PAGE_BUILD = '20261124140827';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -585,10 +639,12 @@ function toast(msg, isErr) {
   toastTimer = setTimeout(() => (t.style.display = 'none'), 3000);
 }
 
+let extras = null, extrasDirty = false;   // bản nháp các luật thêm (từ khóa, lịch, nghỉ mắt...)
 function updateSaveBar() {
   $('save').style.display = dirty ? '' : 'none';
   $('saveProfiles').style.display = profilesDirty ? '' : 'none';
-  $('saveBar').classList.toggle('show', dirty || profilesDirty);
+  $('saveExtras').style.display = extrasDirty ? '' : 'none';
+  $('saveBar').classList.toggle('show', dirty || profilesDirty || extrasDirty);
 }
 // "Có thay đổi" = bản nháp khác bản trên tivi (bấm lại đúng lựa chọn cũ, chuyển tab... không tính).
 // Danh sách id (nhóm của profile, kênh của nhóm) so không kể thứ tự.
@@ -667,6 +723,7 @@ function render() {
 
   renderRemote();
   renderBlocked();
+  if (!extrasDirty) loadExtras();
   $('ver').textContent = cfg.version ? `${cfg.tvName ? cfg.tvName + ' · ' : ''}FamTube ${cfg.version} · bản dựng ${cfg.build}` : '';
   $('minDur').value = String(cfg.minDurationSec);
   if (!$('minDur').value) $('minDur').value = '180';
@@ -900,12 +957,20 @@ function renderToday() {
         </div>
       </div>
       ${it.limit > 0 || win ? `<div class="note" style="margin-top:10px">${weekend ? 'Cuối tuần' : 'Ngày thường'}${it.limit > 0 ? ': ' + it.limit + ' phút' : ''}${win}</div>` : ''}
-      <div class="actions">
-        <button data-today="grant">+ 15 phút</button>
-        <button data-today="reset" ${used ? '' : 'disabled'}>Xem lại từ đầu</button>
+      <div class="actions" style="grid-template-columns:repeat(3,1fr) 1.6fr">
+        ${[15, 30, 60].map((m) => `<button data-today="grant" data-min="${m}" style="padding:0">+${m}′</button>`).join('')}
+        <button data-today="reset" ${used ? '' : 'disabled'} style="padding:0 8px">Xem lại từ đầu</button>
       </div>
     </div>`;
   }).join('') : '<div class="card empty">Chưa có profile trẻ em. Thêm ở tab Profile.</div>';
+  const st = cfg.statsToday;
+  if (st && (st.videos || Object.keys(st.blocked || {}).length)) {
+    const top = (st.top || []).slice(0, 3).map((t) => `${esc(t.channel)} (${t.count})`).join(', ');
+    const bl = Object.values(st.blocked || {}).reduce((a, b) => a + b, 0);
+    $('todayKids').insertAdjacentHTML('beforeend', `<div class="card"><div class="stat"><div class="ico">📊</div><div class="grow">
+      <div class="card-title">Hôm nay ${st.videos} video${bl ? ` · bị chặn ${bl} lần` : ''}</div>
+      <div class="sub">${top ? 'Xem nhiều: ' + top : ''}</div></div></div></div>`);
+  }
   $('todayNote').textContent = cfg.adultActive ? 'Người lớn đang dùng YouTube tự do trên tivi (không tính giờ, không chặn Shorts).' : '';
 }
 $('todayKids').addEventListener('click', async (e) => {
@@ -915,8 +980,9 @@ $('todayKids').addEventListener('click', async (e) => {
   const name = btn.closest('.card').querySelector('.sub').textContent;
   try {
     if (btn.dataset.today === 'grant') {
-      await api('PUT', '/api/settings', { grant: id });
-      toast(`Đã cho ${name} thêm 15 phút`);
+      const min = Number(btn.dataset.min || 15);
+      await api('PUT', '/api/settings', { grant: id, grantMin: min });
+      toast(`Đã thưởng ${name} thêm ${min} phút`);
     } else {
       if (!confirm(`Xóa số phút ${name} đã xem hôm nay? Sẽ được xem lại đủ giới hạn ngày.`)) return;
       await api('PUT', '/api/settings', { resetUsage: id });
@@ -1111,6 +1177,104 @@ $('blkApply').addEventListener('click', async () => {
   if (!add.length) return;
   await saveBlocked([...(cfg.blockedChannels || []), ...add], `Đã chặn ${add.length} kênh`);
   $('blkSearch').value = ''; $('blkResults').innerHTML = ''; updateBlockBtn();
+});
+
+// ================= Luật thêm: từ khóa, lịch, nghỉ mắt, app khác, báo cáo =================
+const KW_SUGGEST = ['GTA', 'kinh dị', 'creepy', 'horror', 'quỷ', 'ma ám', 'zombie', 'súng', 'đánh nhau', 'Free Fire', 'PUBG', 'Squid Game', 'Skibidi'];
+const DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+const fold = (t) => t.toLowerCase().replace(/đ/g, 'd').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+function setExtrasDirty() {
+  extrasDirty = !sameAs(extras, cfg.extras || {});
+  updateSaveBar();
+}
+function renderExtras() {
+  const e = extras;
+  if (!e) return;
+  $('kwList').innerHTML = e.keywords.length ? e.keywords.map((k, i) => `<span class="kw">${esc(k)}<button data-kw-del="${i}" aria-label="Bỏ">✕</button></span>`).join('')
+    : '<div class="empty">Chưa chặn từ nào</div>';
+  const have = new Set(e.keywords.map(fold));
+  $('kwSuggest').innerHTML = KW_SUGGEST.filter((k) => !have.has(fold(k))).map((k) => `<button data-kw-add="${esc(k)}">+ ${esc(k)}</button>`).join('');
+  const groupsAll = cfg.groups || [];
+  $('schedList').innerHTML = e.schedules.length ? e.schedules.map((sc, i) => `<div class="sched" data-sc="${i}">
+      <div class="row"><div class="seg grow"><button data-sc-mode="lock" aria-pressed="${sc.mode === 'lock'}">🔒 Khóa tivi</button><button data-sc-mode="study" aria-pressed="${sc.mode === 'study'}">📚 Giờ học</button></div>
+        <button class="icon" data-sc-del aria-label="Xóa lịch">✕</button></div>
+      <div class="days">${DAY_NAMES.map((d, j) => `<button data-sc-day="${j + 1}" aria-pressed="${sc.days.includes(j + 1)}">${d}</button>`).join('')}</div>
+      <div class="grid2"><label class="field">Từ<input type="time" data-sc-start value="${esc(sc.start)}"></label><label class="field">Đến<input type="time" data-sc-end value="${esc(sc.end)}"></label></div>
+      ${sc.mode === 'study' ? `<div class="field">Nhóm được xem trong giờ học<div class="checks">${groupsAll.map((g) =>
+        `<label><input type="checkbox" data-sc-group="${g.id}" ${sc.groupIds.includes(g.id) ? 'checked' : ''}>${esc(g.name)}</label>`).join('')}</div></div>` : ''}
+    </div>`).join('') : '<div class="empty">Chưa có lịch nào</div>';
+  $('brEvery').value = String(e.breakEveryMin || 0);
+  $('brMin').value = String(e.breakMin || 5);
+  $('appList').innerHTML = (cfg.apps || []).length ? cfg.apps.map((a) =>
+    `<label><input type="checkbox" data-app="${esc(a.pkg)}" ${e.trackedApps.includes(a.pkg) ? 'checked' : ''}>${esc(a.label)}</label>`).join('')
+    : '<div class="empty">Cập nhật app trên tivi để chọn</div>';
+  $('askWho').checked = e.askWhoWatches !== false;
+  $('repOn').checked = !!e.reportAt;
+  $('repAt').value = e.reportAt || '20:30';
+  $('repAt').disabled = !e.reportAt;
+}
+function loadExtras() {
+  const e = cfg.extras || {};
+  extras = { keywords: [...(e.keywords || [])], schedules: (e.schedules || []).map((x) => ({ ...x, days: [...x.days], groupIds: [...x.groupIds] })),
+    allowlistOnly: !!e.allowlistOnly, breakEveryMin: e.breakEveryMin || 0, breakMin: e.breakMin || 5,
+    trackedApps: [...(e.trackedApps || [])], askWhoWatches: e.askWhoWatches !== false, reportAt: e.reportAt ?? '20:30' };
+  extrasDirty = false; updateSaveBar();
+  renderExtras();
+}
+function addKeyword(k) {
+  k = (k || '').trim();
+  if (!k || extras.keywords.some((x) => fold(x) === fold(k))) return;
+  extras.keywords.push(k); setExtrasDirty(); renderExtras();
+}
+$('kwAdd').addEventListener('click', () => { addKeyword($('kwInput').value); $('kwInput').value = ''; });
+$('kwInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { addKeyword($('kwInput').value); $('kwInput').value = ''; } });
+$('kwSuggest').addEventListener('click', (e) => { const b = e.target.closest('[data-kw-add]'); if (b) addKeyword(b.dataset.kwAdd); });
+$('kwList').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-kw-del]');
+  if (b) { extras.keywords.splice(Number(b.dataset.kwDel), 1); setExtrasDirty(); renderExtras(); }
+});
+$('schedSleep').addEventListener('click', () => { extras.schedules.push({ days: [1, 2, 3, 4, 5, 6, 7], start: '21:00', end: '06:30', mode: 'lock', groupIds: [] }); setExtrasDirty(); renderExtras(); });
+$('schedStudy').addEventListener('click', () => {
+  const study = (cfg.groups || []).filter((g) => /toán|tiếng anh|khoa học/i.test(g.name)).map((g) => g.id);
+  extras.schedules.push({ days: [1, 2, 3, 4, 5], start: '19:00', end: '20:30', mode: 'study', groupIds: study }); setExtrasDirty(); renderExtras();
+});
+$('schedList').addEventListener('click', (e) => {
+  const box = e.target.closest('[data-sc]'); if (!box) return;
+  const sc = extras.schedules[Number(box.dataset.sc)];
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.scMode) sc.mode = b.dataset.scMode;
+  else if (b.dataset.scDay) { const d = Number(b.dataset.scDay); sc.days = sc.days.includes(d) ? sc.days.filter((x) => x !== d) : [...sc.days, d].sort(); }
+  else if (b.hasAttribute('data-sc-del')) { if (!confirm('Xóa lịch này?')) return; extras.schedules.splice(Number(box.dataset.sc), 1); }
+  else return;
+  setExtrasDirty(); renderExtras();
+});
+$('schedList').addEventListener('change', (e) => {
+  const box = e.target.closest('[data-sc]'); if (!box) return;
+  const sc = extras.schedules[Number(box.dataset.sc)];
+  if (e.target.hasAttribute('data-sc-start')) sc.start = e.target.value;
+  else if (e.target.hasAttribute('data-sc-end')) sc.end = e.target.value;
+  else if (e.target.dataset.scGroup) { const id = Number(e.target.dataset.scGroup); sc.groupIds = e.target.checked ? [...new Set([...sc.groupIds, id])] : sc.groupIds.filter((x) => x !== id); }
+  else return;
+  setExtrasDirty();
+});
+$('brEvery').addEventListener('change', () => { extras.breakEveryMin = Number($('brEvery').value); setExtrasDirty(); });
+$('brMin').addEventListener('change', () => { extras.breakMin = Number($('brMin').value); setExtrasDirty(); });
+$('appList').addEventListener('change', (e) => {
+  const pkg = e.target.dataset.app; if (!pkg) return;
+  extras.trackedApps = e.target.checked ? [...new Set([...extras.trackedApps, pkg])] : extras.trackedApps.filter((x) => x !== pkg);
+  setExtrasDirty();
+});
+$('askWho').addEventListener('change', () => { extras.askWhoWatches = $('askWho').checked; setExtrasDirty(); });
+$('repOn').addEventListener('change', () => { extras.reportAt = $('repOn').checked ? ($('repAt').value || '20:30') : ''; setExtrasDirty(); renderExtras(); });
+$('repAt').addEventListener('change', () => { if ($('repOn').checked) { extras.reportAt = $('repAt').value; setExtrasDirty(); } });
+$('repNow').addEventListener('click', async () => {
+  try { const r = await api('POST', '/api/report'); toast(r.message || 'Đã gửi'); } catch (e) { toast(e.message, true); }
+});
+$('saveExtras').addEventListener('click', async () => {
+  if (extras.schedules.some((x) => !x.start || !x.end || !x.days.length)) return toast('Lịch cần có ngày và giờ bắt đầu, kết thúc', true);
+  try { await api('PUT', '/api/extras', extras); toast('Đã lưu luật lên tivi'); await load(); }
+  catch (e) { toast(e.message, true); }
 });
 
 // ================= Tab & thanh chọn =================
