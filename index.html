@@ -208,6 +208,7 @@
 
 <div id="tokenGate" class="card stack" style="display:none; margin-top:8px">
   <div class="card-title">Bật quản lý online</div>
+  <div class="note" id="gateHint" style="font-weight:600; color:var(--danger)"></div>
   <div class="note">Dán token GitHub (giống token đã lưu cho tivi ở mục "Quản lý online"). Chỉ cần làm một lần.</div>
   <input type="text" id="gateToken" placeholder="github_pat_…" autocomplete="off">
   <button id="gateBtn" class="primary">Lưu</button>
@@ -1360,6 +1361,9 @@ async function start() {
   if (hashToken) store(REMOTE_TOKEN_STORE, hashToken);
   if (!store(REMOTE_TOKEN_STORE)) {
     $('tokenGate').style.display = '';
+    let fromQr = false;
+    try { fromQr = !!sessionStorage.getItem(APPROVE_STORE); } catch {}
+    if (fromQr) $('gateHint').textContent = 'Trình duyệt này chưa đăng nhập. Mở app FamTube trên màn hình chính điện thoại: yêu cầu của tivi đang chờ ở tab Hôm nay, bấm Cho phép là xong.';
     $('gateBtn').onclick = () => {
       const t = $('gateToken').value.trim();
       if (!t) return;
