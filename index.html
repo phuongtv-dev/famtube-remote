@@ -1006,6 +1006,7 @@ function renderProfiles() {
         <input type="text" value="${esc(p.name)}" data-pf="name" aria-label="Tên profile" class="grow">
         <button class="icon" data-pf="del" aria-label="Xóa profile">✕</button>
       </div>
+      <div class="field">Loại profile <span class="note">Trẻ em: bị giới hạn giờ, chỉ xem nhóm được chọn · Người lớn: xem tự do</span></div>
       <div class="seg" role="group" aria-label="Loại profile">
         <button data-pf="adult" aria-pressed="${!kid}">Người lớn</button>
         <button data-pf="kid" aria-pressed="${kid}">Trẻ em</button>
