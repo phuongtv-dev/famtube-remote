@@ -26,8 +26,8 @@
     --ok:#1F9D63; --ok-soft:#E3F5EC; --danger:#C2414B; --radius:18px;
     --tabbar:64px;
     /* bề mặt kính, ô nhập, nút phụ */
-    --glass:rgba(255,255,255,.58); --glass-border:rgba(255,255,255,.75); --glass-hi:rgba(255,255,255,.8);
-    --glass-strong:rgba(255,255,255,.7); --bar-bg:rgba(238,240,251,.55); --tab-bg:rgba(255,255,255,.55);
+    --glass:rgba(255,255,255,.42); --glass-border:rgba(255,255,255,.7); --glass-hi:rgba(255,255,255,.55);
+    --glass-strong:rgba(255,255,255,.55); --bar-bg:rgba(238,240,251,.55); --tab-bg:rgba(255,255,255,.55);
     --field:rgba(255,255,255,.65); --field-border:rgba(255,255,255,.9); --field-focus:#fff;
     --soft:rgba(27,26,61,.06); --soft2:rgba(27,26,61,.10); --track:rgba(27,26,61,.08);
     --btn:rgba(39,65,241,.10); --btn-hover:rgba(39,65,241,.16);
@@ -36,7 +36,8 @@
     --grad:linear-gradient(135deg,#4A63FF 0%,#2741F1 55%,#5B3FE8 100%);
     --grad-danger:linear-gradient(135deg,#E0636C,#C2414B);
     --inv-bg:#1B1A3D; --inv-ink:#fff;
-    --blob1:rgba(39,65,241,.55); --blob2:rgba(216,134,137,.60); --blob3:rgba(140,120,243,.55); --blob4:rgba(80,200,220,.40);
+    --blob1:rgba(39,65,241,.70); --blob2:rgba(236,120,140,.70); --blob3:rgba(140,100,243,.70); --blob4:rgba(60,200,230,.55);
+    --blob5:rgba(255,180,120,.50); --sheen:rgba(255,255,255,.22); --sheen-top:rgba(255,255,255,.12);
     color-scheme:light;
   }
   /* ---------- Chế độ tối: theo máy (Tự động) hoặc chọn Tối ---------- */
@@ -52,7 +53,8 @@
     --seg-on:rgba(255,255,255,.14); --switch-off:rgba(255,255,255,.16); --tab-idle:#77768F; --ph:#2A2A44;
     --shadow:0 8px 32px rgba(0,0,0,.35); --shadow-btn:0 1px 2px rgba(0,0,0,.3);
     --inv-bg:#ECEBFA; --inv-ink:#14142A;
-    --blob1:rgba(39,65,241,.35); --blob2:rgba(216,134,137,.22); --blob3:rgba(140,120,243,.30); --blob4:rgba(80,200,220,.16);
+    --blob1:rgba(39,65,241,.45); --blob2:rgba(216,134,137,.26); --blob3:rgba(140,120,243,.38); --blob4:rgba(80,200,220,.20);
+    --blob5:rgba(255,150,110,.12); --sheen:rgba(255,255,255,.05); --sheen-top:rgba(255,255,255,.04);
     color-scheme:dark;
   } }
   :root[data-theme="dark"] {
@@ -67,7 +69,8 @@
     --seg-on:rgba(255,255,255,.14); --switch-off:rgba(255,255,255,.16); --tab-idle:#77768F; --ph:#2A2A44;
     --shadow:0 8px 32px rgba(0,0,0,.35); --shadow-btn:0 1px 2px rgba(0,0,0,.3);
     --inv-bg:#ECEBFA; --inv-ink:#14142A;
-    --blob1:rgba(39,65,241,.35); --blob2:rgba(216,134,137,.22); --blob3:rgba(140,120,243,.30); --blob4:rgba(80,200,220,.16);
+    --blob1:rgba(39,65,241,.45); --blob2:rgba(216,134,137,.26); --blob3:rgba(140,120,243,.38); --blob4:rgba(80,200,220,.20);
+    --blob5:rgba(255,150,110,.12); --sheen:rgba(255,255,255,.05); --sheen-top:rgba(255,255,255,.04);
     color-scheme:dark;
   }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -77,13 +80,21 @@
   body { margin:0; background:transparent; color:var(--ink); font:16px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;
          padding:0 16px calc(var(--tabbar) + 90px + env(safe-area-inset-bottom)); }
   /* ---------- Kính mờ (glass): nền gradient + thẻ trong suốt làm mờ phía sau ---------- */
-  body::before { content:""; position:fixed; inset:-20%; z-index:-1; pointer-events:none;
+  /* Nền: lưới màu loang (mesh) trôi chậm + vệt sáng chéo như mặt gương */
+  body::before { content:""; position:fixed; inset:-25%; z-index:-2; pointer-events:none;
     background:
-      radial-gradient(40% 35% at 15% 10%, var(--blob1), transparent 70%),
-      radial-gradient(35% 30% at 90% 20%, var(--blob2), transparent 70%),
-      radial-gradient(45% 40% at 70% 85%, var(--blob3), transparent 70%),
-      radial-gradient(40% 35% at 10% 80%, var(--blob4), transparent 70%),
-      var(--bg); }
+      radial-gradient(38% 32% at 12% 8%, var(--blob1), transparent 70%),
+      radial-gradient(34% 30% at 92% 18%, var(--blob2), transparent 70%),
+      radial-gradient(44% 38% at 72% 88%, var(--blob3), transparent 70%),
+      radial-gradient(38% 34% at 8% 78%, var(--blob4), transparent 70%),
+      radial-gradient(30% 26% at 50% 45%, var(--blob5), transparent 70%),
+      var(--bg);
+    filter:saturate(1.15); animation:drift 38s ease-in-out infinite alternate; }
+  body::after { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:
+      linear-gradient(115deg, transparent 0 38%, var(--sheen) 46%, transparent 54% 100%),
+      linear-gradient(180deg, var(--sheen-top), transparent 30%); }
+  @keyframes drift { from { transform:translate3d(0,0,0) scale(1); } to { transform:translate3d(-4%,3%,0) scale(1.08); } }
   /* iPhone tự phóng to khi chạm ô nhập có chữ nhỏ hơn 16px: giữ mọi ô nhập ở 16px. */
   input, select, textarea { font-size:16px !important; }
 
@@ -105,9 +116,10 @@
   .tab.active { display:block; }
   @keyframes fade { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
   .section-title { font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:22px 4px 8px; }
-  .card { background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius); padding:16px; margin-bottom:12px;
-          -webkit-backdrop-filter:blur(22px) saturate(1.7); backdrop-filter:blur(22px) saturate(1.7);
-          box-shadow:var(--shadow), inset 0 1px 0 var(--glass-hi); }
+  .card { background:linear-gradient(145deg, var(--glass-hi), transparent 45%), var(--glass);
+          border:1px solid var(--glass-border); border-radius:var(--radius); padding:16px; margin-bottom:12px;
+          -webkit-backdrop-filter:blur(26px) saturate(1.8); backdrop-filter:blur(26px) saturate(1.8);
+          box-shadow:var(--shadow), inset 0 1px 0 var(--glass-hi), inset 0 -1px 0 rgba(255,255,255,.04); }
   .card-title { font-weight:700; font-size:16px; margin:0 0 2px; }
   .sub { color:var(--muted); font-size:13px; }
   .note { font-size:12.5px; color:var(--muted); line-height:1.4; }
@@ -175,6 +187,36 @@
   .checks label { display:flex; gap:12px; align-items:center; padding:10px 2px; border-bottom:1px solid var(--line); font-size:15px; font-weight:400; color:var(--ink); }
   .checks label:last-child { border-bottom:0; }
   .checks input { width:22px; height:22px; accent-color:var(--accent); flex-shrink:0; }
+
+  /* ---------- Nhóm thu gọn (Cài đặt, Profile) ---------- */
+  details.grp { background:linear-gradient(145deg, var(--glass-hi), transparent 45%), var(--glass); border:1px solid var(--glass-border); border-radius:var(--radius); margin-bottom:12px;
+                -webkit-backdrop-filter:blur(24px) saturate(1.8); backdrop-filter:blur(24px) saturate(1.8); box-shadow:var(--shadow), inset 0 1px 0 var(--glass-hi); }
+  details.grp > summary { display:flex; align-items:center; gap:12px; padding:14px 16px; color:var(--ink); font-size:16px; font-weight:700; }
+  details.grp > summary::after { content:""; width:9px; height:9px; margin-left:auto; flex-shrink:0; border-right:2px solid var(--muted); border-bottom:2px solid var(--muted);
+                                 transform:rotate(45deg) translate(-2px,-2px); transition:transform .2s; }
+  details.grp[open] > summary::after { transform:rotate(225deg) translate(-2px,-2px); }
+  details.grp > summary .gi { width:40px; height:40px; border-radius:13px; display:grid; place-items:center; font-size:19px; flex-shrink:0;
+                              background:var(--glass-strong); border:1px solid var(--glass-border); box-shadow:inset 0 1px 0 var(--glass-hi); }
+  details.grp > summary .gt { display:flex; flex-direction:column; min-width:0; }
+  details.grp > summary .gt small { font-size:12.5px; font-weight:500; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  details.grp[open] > summary { border-bottom:1px solid var(--line); }
+  .grp-body { padding:2px 12px 14px; }
+  .grp-body .card { background:var(--glass-strong); box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none; }
+  .grp-body .section-title { margin:16px 4px 8px; }
+  .grp-body > details:not(.grp) { margin:10px 4px 0 !important; }
+  /* Profile thu gọn */
+  .pf { padding:0 !important; gap:0 !important; }
+  .pf > .pf-top { width:100%; height:auto; padding:12px 16px; background:none; border:0; border-radius:var(--radius); justify-content:flex-start; gap:12px;
+                  color:var(--ink); text-align:left; font-weight:400; white-space:normal; }
+  .pf > .pf-top:hover { background:none; }
+  .pf > .pf-top:active { transform:none; }
+  .pf-top .pf-name { font-weight:700; font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pf-top .pf-sum { font-size:12.5px; color:var(--muted); }
+  .pf-top .chev { width:9px; height:9px; margin-left:auto; flex-shrink:0; border-right:2px solid var(--muted); border-bottom:2px solid var(--muted);
+                  transform:rotate(45deg) translate(-2px,-2px); transition:transform .2s; }
+  .pf.open .pf-top .chev { transform:rotate(225deg) translate(-2px,-2px); }
+  .pf .pf-body { display:none; padding:14px 16px 16px; border-top:1px solid var(--line); flex-direction:column; gap:12px; }
+  .pf.open .pf-body { display:flex; }
 
   /* ---------- Hôm nay ---------- */
   .kid { display:flex; gap:14px; align-items:center; }
@@ -269,7 +311,7 @@
   #busy .spin { width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
   body.busy main button, body.busy main input, body.busy main select, body.busy .savebar button { pointer-events:none; opacity:.5; }
-  @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+  @media (prefers-reduced-motion: reduce) { *, body::before { animation:none !important; transition:none !important; } }
 </style>
 </head>
 <body>
@@ -357,6 +399,10 @@
 
 <!-- ===================== CÀI ĐẶT ===================== -->
 <section class="tab" id="tab-settings" data-title="Cài đặt">
+  <div style="height:8px"></div>
+  <details class="grp" data-grp="block">
+    <summary><span class="gi">🚫</span><span class="gt">Chặn nội dung<small>Shorts · kênh · từ khóa</small></span></summary>
+    <div class="grp-body">
   <div class="section-title">Chặn Shorts trong app YouTube</div>
   <div class="card list">
     <div class="item">
@@ -403,6 +449,22 @@
     <div class="chips" id="kwSuggest"></div>
   </div>
 
+  <button id="gSave" class="primary block">Lưu cài đặt chặn</button>
+  <details style="margin:10px 4px 0">
+    <summary>Nhận diện Shorts (nâng cao)</summary>
+    <div class="card stack" style="margin-top:8px">
+      <label class="field">Từ khóa nhận diện (cách nhau dấu phẩy)<input type="text" id="gMarkers" autocomplete="off"></label>
+      <div class="note">Mở Shorts trên tivi rồi bấm “Xem nhật ký”. Dòng “CHẶN” là lúc FamTube đã xử lý.</div>
+      <button id="gLogBtn">Xem nhật ký</button>
+      <pre id="gLog" style="white-space:pre-wrap; font-size:12px; max-height:260px; overflow:auto; margin:0"></pre>
+    </div>
+  </details>
+
+    </div>
+  </details>
+  <details class="grp" data-grp="time">
+    <summary><span class="gi">⏰</span><span class="gt">Giờ xem &amp; nghỉ<small>Lịch · nghỉ mắt · app khác · YouTube trực tiếp</small></span></summary>
+    <div class="grp-body">
   <div class="section-title">Lịch tự động</div>
   <div class="card stack">
     <div class="note"><b>Khóa tivi</b>: mọi app bị chặn (vd. giờ ngủ). <b>Giờ học</b>: chỉ xem được các nhóm học trong FamTube, YouTube và app khác bị chặn.</div>
@@ -433,14 +495,6 @@
     </div>
   </div>
 
-  <div class="section-title">Báo cáo cuối ngày</div>
-  <div class="card stack">
-    <div class="note">Gửi lên điện thoại (app ntfy): mỗi con xem bao nhiêu phút, kênh xem nhiều, số lần vào Shorts, video bị chặn.</div>
-    <div class="row"><label class="field grow">Gửi lúc<input type="time" id="repAt"></label>
-      <label class="item" style="padding:0; gap:8px; margin-top:20px"><input type="checkbox" class="switch" id="repOn"></label></div>
-    <button id="repNow">Gửi báo cáo hôm nay ngay</button>
-  </div>
-
   <div class="section-title">Mở YouTube không qua FamTube</div>
   <div class="card list">
     <div class="item">
@@ -457,17 +511,12 @@
       <div class="note" style="margin-top:8px">0 phút = không giới hạn · Để trống giờ = cả ngày.</div>
     </div>
   </div>
-  <button id="gSave" class="primary block">Lưu cài đặt chặn</button>
-  <details style="margin:10px 4px 0">
-    <summary>Nhận diện Shorts (nâng cao)</summary>
-    <div class="card stack" style="margin-top:8px">
-      <label class="field">Từ khóa nhận diện (cách nhau dấu phẩy)<input type="text" id="gMarkers" autocomplete="off"></label>
-      <div class="note">Mở Shorts trên tivi rồi bấm “Xem nhật ký”. Dòng “CHẶN” là lúc FamTube đã xử lý.</div>
-      <button id="gLogBtn">Xem nhật ký</button>
-      <pre id="gLog" style="white-space:pre-wrap; font-size:12px; max-height:260px; overflow:auto; margin:0"></pre>
+  <button class="primary block gsave-proxy">Lưu cài đặt chặn</button>
     </div>
   </details>
-
+  <details class="grp" data-grp="famtube">
+    <summary><span class="gi">📺</span><span class="gt">Trong FamTube<small>Lọc video ngắn · mã PIN</small></span></summary>
+    <div class="grp-body">
   <div class="section-title">Trong FamTube</div>
   <div class="card list">
     <div class="item" style="display:block">
@@ -490,6 +539,37 @@
     </div>
   </div>
 
+    </div>
+  </details>
+  <details class="grp" data-grp="notify">
+    <summary><span class="gi">🔔</span><span class="gt">Thông báo &amp; báo cáo<small>ntfy · báo cáo cuối ngày</small></span></summary>
+    <div class="grp-body">
+  <div class="section-title">Thông báo trên điện thoại</div>
+  <div class="card stack">
+    <div class="stat"><div class="ico">🔔</div><div class="grow"><div class="card-title">Nhận tin từ tivi</div>
+      <div class="sub">Khi tivi xin phép, con hết giờ hoặc bị khóa. Bố và mẹ cùng nhận được.</div></div></div>
+    <div class="note">1. Cài app <b>ntfy</b> (App Store / Google Play, miễn phí, không cần tài khoản).<br>
+      2. Trong ntfy bấm <b>+</b>, nhập chủ đề dưới đây (để nguyên máy chủ ntfy.sh) → Subscribe.<br>
+      3. Cho phép ntfy gửi thông báo. Bấm vào thông báo là mở FamTube.</div>
+    <div class="row"><input type="text" id="ntfyTopic" class="grow" readonly style="font-weight:700; letter-spacing:.04em"><button id="ntfyCopy">Chép</button></div>
+    <a id="ntfyOpen" class="primary" style="display:flex; align-items:center; justify-content:center; height:44px; border-radius:12px; color:#fff; font-weight:600; text-decoration:none; background:linear-gradient(135deg,#3B55FF,#2741F1 60%,#5B3FE8)">Đăng ký trong app ntfy</a>
+    <div class="note">Đã cài ntfy thì bấm nút trên là xong. Nếu nút không mở được app: chép chủ đề rồi dán vào ntfy (bấm +).</div>
+    <button id="ntfyTest">Gửi thông báo thử</button>
+  </div>
+
+  <div class="section-title">Báo cáo cuối ngày</div>
+  <div class="card stack">
+    <div class="note">Gửi lên điện thoại (app ntfy): mỗi con xem bao nhiêu phút, kênh xem nhiều, số lần vào Shorts, video bị chặn.</div>
+    <div class="row"><label class="field grow">Gửi lúc<input type="time" id="repAt"></label>
+      <label class="item" style="padding:0; gap:8px; margin-top:20px"><input type="checkbox" class="switch" id="repOn"></label></div>
+    <button id="repNow">Gửi báo cáo hôm nay ngay</button>
+  </div>
+
+    </div>
+  </details>
+  <details class="grp" data-grp="online">
+    <summary><span class="gi">☁️</span><span class="gt">Kết nối &amp; sao lưu<small>Quản lý online · sao lưu</small></span></summary>
+    <div class="grp-body">
   <div class="section-title">Quản lý online</div>
   <div class="card stack">
     <div class="sub" id="remoteInfo"></div>
@@ -504,19 +584,6 @@
     </details>
   </div>
 
-  <div class="section-title">Thông báo trên điện thoại</div>
-  <div class="card stack">
-    <div class="stat"><div class="ico">🔔</div><div class="grow"><div class="card-title">Nhận tin từ tivi</div>
-      <div class="sub">Khi tivi xin phép, con hết giờ hoặc bị khóa. Bố và mẹ cùng nhận được.</div></div></div>
-    <div class="note">1. Cài app <b>ntfy</b> (App Store / Google Play, miễn phí, không cần tài khoản).<br>
-      2. Trong ntfy bấm <b>+</b>, nhập chủ đề dưới đây (để nguyên máy chủ ntfy.sh) → Subscribe.<br>
-      3. Cho phép ntfy gửi thông báo. Bấm vào thông báo là mở FamTube.</div>
-    <div class="row"><input type="text" id="ntfyTopic" class="grow" readonly style="font-weight:700; letter-spacing:.04em"><button id="ntfyCopy">Chép</button></div>
-    <a id="ntfyOpen" class="primary" style="display:flex; align-items:center; justify-content:center; height:44px; border-radius:12px; color:#fff; font-weight:600; text-decoration:none; background:linear-gradient(135deg,#3B55FF,#2741F1 60%,#5B3FE8)">Đăng ký trong app ntfy</a>
-    <div class="note">Đã cài ntfy thì bấm nút trên là xong. Nếu nút không mở được app: chép chủ đề rồi dán vào ntfy (bấm +).</div>
-    <button id="ntfyTest">Gửi thông báo thử</button>
-  </div>
-
   <div class="section-title">Sao lưu</div>
   <div class="card stack">
     <div id="cloudBackup" class="stack" style="display:none">
@@ -527,6 +594,8 @@
     <div class="grid2"><button id="backupBtn">Tải file</button><button id="restoreBtn">Khôi phục</button></div>
     <div class="note">Gồm kênh, nhóm, profile và cài đặt. Không gồm ảnh đại diện, hình nền.</div>
   </div>
+    </div>
+  </details>
   <div class="note" id="ver" style="text-align:center; margin:18px 0 4px"></div>
 </section>
 </main>
@@ -558,7 +627,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127192547';
+const PAGE_BUILD = '20261127193335';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -1447,14 +1516,29 @@ function avatarHtml(p) {
   return `<div class="avatar" style="background:${esc(p.color)}">${p.avatarUrl ? `<img src="${esc(p.avatarUrl)}" alt="">` : esc((p.name || '?').trim().charAt(0).toUpperCase() || '?')}</div>`;
 }
 
+const pfOpen = new Set();   // id profile đang mở (profile mới chưa lưu luôn mở)
+function pfSummary(p) {
+  if (p.kind !== 'kid') return 'Người lớn' + (p.pinRequired ? ' · cần PIN' : '');
+  const m = (v) => v > 0 ? v + ' phút' : 'không giới hạn';
+  return `Trẻ em · ngày thường ${m(p.dailyLimitMin)} · cuối tuần ${m(p.weekendLimitMin)} · ${p.groupIds.length} nhóm`;
+}
 function renderProfiles() {
   $('profiles').innerHTML = profiles.map((p, i) => {
     const kid = p.kind === 'kid';
     const saved = p.id !== 0;
+    const open = !saved || pfOpen.has(p.id);
     return `
-    <div class="card stack" data-p="${i}">
-      <div class="pf-head">
+    <div class="card stack pf${open ? ' open' : ''}" data-p="${i}">
+      <button class="pf-top" data-pf="toggle" aria-expanded="${open}">
         ${avatarHtml(p)}
+        <span class="grow" style="display:flex; flex-direction:column; min-width:0">
+          <span class="pf-name">${esc(p.name || 'Chưa đặt tên')}</span>
+          <span class="pf-sum">${esc(pfSummary(p))}</span>
+        </span>
+        <span class="chev"></span>
+      </button>
+      <div class="pf-body">
+      <div class="pf-head">
         <input type="text" value="${esc(p.name)}" data-pf="name" aria-label="Tên profile" class="grow">
         <button class="icon" data-pf="del" aria-label="Xóa profile">✕</button>
       </div>
@@ -1494,6 +1578,7 @@ function renderProfiles() {
           ${p.wallpaperUrl ? '<button class="pill" data-pf="rmWallpaper">Bỏ hình nền</button>' : '<span></span>'}
         </div>` : ''}` : '<div class="note">Bấm “Lưu profile” trước rồi mới thêm ảnh.</div>'}
       </div>
+      </div>
     </div>`;
   }).join('');
 }
@@ -1510,6 +1595,10 @@ $('profiles').addEventListener('click', async (e) => {
   const i = Number(btn.closest('[data-p]').dataset.p);
   const p = profiles[i];
   switch (btn.dataset.pf) {
+    case 'toggle':
+      if (!p.id) return;
+      if (pfOpen.has(p.id)) pfOpen.delete(p.id); else pfOpen.add(p.id);
+      return renderProfiles();
     case 'adult': p.kind = 'adult'; break;
     case 'kid': p.kind = 'kid'; p.pinRequired = false; break;
     case 'color': p.color = btn.dataset.c; break;
@@ -1535,7 +1624,7 @@ $('profiles').addEventListener('input', (e) => {
   const el = e.target;
   if (!el.dataset.pf) return;
   const p = profiles[Number(el.closest('[data-p]').dataset.p)];
-  if (el.dataset.pf === 'name') p.name = el.value;
+  if (el.dataset.pf === 'name') { p.name = el.value; el.closest('[data-p]').querySelector('.pf-name').textContent = el.value || 'Chưa đặt tên'; }
   else if (el.dataset.pf === 'windowStart' || el.dataset.pf === 'windowEnd') p[el.dataset.pf] = el.value;
   else return;
   setProfilesDirty(true);
@@ -1855,6 +1944,20 @@ start();
     apply(true);
   });
   apply(false);
+})();
+
+// ---------- Cài đặt: nhóm thu gọn, nhớ nhóm đang mở ----------
+(function () {
+  let open = [];
+  try { open = JSON.parse(localStorage.getItem('ft_grp') || '[]'); } catch (e) {}
+  document.querySelectorAll('details.grp').forEach((d) => {
+    if (open.includes(d.dataset.grp)) d.open = true;
+    d.addEventListener('toggle', () => {
+      const now = [...document.querySelectorAll('details.grp')].filter((x) => x.open).map((x) => x.dataset.grp);
+      try { localStorage.setItem('ft_grp', JSON.stringify(now)); } catch (e) {}
+    });
+  });
+  document.querySelectorAll('.gsave-proxy').forEach((b) => b.addEventListener('click', () => document.getElementById('gSave').click()));
 })();
 </script>
 </body>
