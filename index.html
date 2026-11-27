@@ -303,6 +303,13 @@
   .locked-banner { background:var(--warm-soft); color:var(--danger); border-radius:14px; padding:12px 14px; font-weight:600; font-size:14px;
                    display:flex; align-items:center; gap:10px; }
   .hist .item { padding:8px 0; min-height:0; }
+  .hist-row { padding:10px 0; }
+  .ch-act { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; align-items:center; }
+  .ch-act .pill { height:30px; font-size:12.5px; padding:0 12px; }
+  .ch-act .pill.add { background:var(--accent-soft); color:var(--accent); border-color:transparent; }
+  .ch-act .pill.blk { background:var(--warm-soft); color:var(--danger); border-color:transparent; }
+  .ch-act.compact { margin-top:6px; }
+  .ch-act.compact .pill { height:28px; font-size:12px; }
   .kw { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 6px 0 12px; border-radius:999px; background:var(--warm-soft); color:var(--danger); font-size:13px; font-weight:600; }
   .kw button { width:24px; height:24px; padding:0; border-radius:50%; background:rgba(194,65,75,.15); color:var(--danger); font-size:13px; border:0; }
   .days { display:flex; gap:4px; flex-wrap:wrap; }
@@ -736,7 +743,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127215244';
+const PAGE_BUILD = '20261127215847';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -1461,6 +1468,16 @@ $('todayKids').addEventListener('click', async (e) => {
 const MSG_PRESETS = ['Xuống ăn cơm nhé!', 'Đi ngủ thôi!', 'Làm bài tập nào!', 'Tắt tivi nhé!'];
 function fmtClock(ms) { return new Date(ms).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }); }
 function fmtDur(sec) { const m = Math.floor(sec / 60), s = sec % 60; return `${m}:${String(s).padStart(2, '0')}`; }
+// Nút cho một kênh vừa xem: thêm vào FamTube (chọn nhóm) / chặn trong YouTube. Chỉ có tên kênh (YouTube không cho mã kênh).
+const inFamTube = (name) => !!name && (cfg.channels || []).some((c) => fold(c.title) === fold(name));
+function chActions(name, compact) {
+  if (!name) return '';
+  const added = inFamTube(name), blocked = isBlocked(name);
+  return `<div class="ch-act${compact ? ' compact' : ''}" data-ch-name="${esc(name)}">
+    ${added ? '<span class="mini">✓ Có trong FamTube</span>' : blocked ? '' : '<button class="pill add" data-chact="add">＋ Thêm vào FamTube</button>'}
+    ${blocked ? '<span class="mini none" style="color:var(--danger)">⛔ Đã chặn</span>' : added ? '' : '<button class="pill blk" data-chact="block">⛔ Chặn kênh</button>'}
+  </div>`;
+}
 function renderTv() {
   const tv = cfg.tv;
   if (!tv) { setHTML($('tvCard'), ''); return; }
@@ -1474,8 +1491,9 @@ function renderTv() {
         <div class="thumb">${pl.isPlaying ? '▶' : '❚❚'}</div>
         <div class="grow">
           <div class="tv-title">${esc(pl.title)}</div>
-          <div class="sub">${esc(pl.channel || '')}${pl.channel && !isBlocked(pl.channel) ? ` · <a href="#" data-block-title="${esc(pl.channel)}" style="color:var(--danger); font-weight:600; text-decoration:none">Chặn kênh</a>` : ''}${pl.durationSec ? ' · ' + fmtDur(pl.positionSec) + ' / ' + fmtDur(pl.durationSec) : ''}${pl.isPlaying ? '' : ' · đang dừng'}</div>
+          <div class="sub">${esc(pl.channel || '')}${pl.durationSec ? ' · ' + fmtDur(pl.positionSec) + ' / ' + fmtDur(pl.durationSec) : ''}${pl.isPlaying ? '' : ' · đang dừng'}</div>
           ${pl.durationSec ? `<div class="progress"><div style="width:${pct}%"></div></div>` : ''}
+          ${chActions(pl.channel, false)}
         </div>
       </div>`;
   } else {
@@ -1510,14 +1528,17 @@ function renderTv() {
       <div class="field" style="margin-bottom:6px">Khóa tivi ngay</div>
       <div class="chips">${[15, 30, 60, 120].map((m) => `<button data-tv="lock" data-min="${m}">🔒 ${m < 60 ? m + ' phút' : m / 60 + ' giờ'}</button>`).join('')}</div>
     </div>`}
-    ${hist.length ? `<details id="histBox"${histOpen ? ' open' : ''}><summary>Đã xem gần đây (${hist.length})</summary><div class="checks hist">${hist.map((h) =>
-      `<label><input type="checkbox" data-hist-ch="${esc(h.channel || '')}" ${!h.channel || isBlocked(h.channel) ? 'disabled' : ''} ${isBlocked(h.channel) ? 'checked' : ''}>
-        <span class="grow">${esc(h.title)}<span class="sub" style="display:block">${fmtClock(h.at)} · ${esc(h.channel || 'chưa rõ kênh')}${isBlocked(h.channel) ? ' · <b style="color:var(--danger)">đã chặn</b>' : ''}</span></span></label>`).join('')}</div>
-      <button id="histBlock" class="danger block" style="display:none; margin-top:8px"></button></details>` : ''}
+    ${hist.length ? `<details id="histBox"${histOpen ? ' open' : ''}><summary>Đã xem gần đây (${hist.length})</summary><div class="list hist">${hist.map((h) =>
+      `<div class="hist-row">
+        <div class="tv-title" style="font-size:14px; font-weight:600">${esc(h.title)}</div>
+        <div class="sub">${fmtClock(h.at)} · ${esc(h.channel || 'chưa rõ kênh')}</div>
+        ${chActions(h.channel, true)}
+      </div>`).join('')}</div></details>` : ''}
   </div>`);
 }
 let histOpen = false;   // giữ mục "Đã xem gần đây" đang mở khi trang tự làm mới
 function histPicked() {
+  if ($('tvCard').querySelector('.ch-addpanel')) return ['(đang thêm kênh)'];
   return [...new Set([...$('tvCard').querySelectorAll('input[data-hist-ch]:checked:not(:disabled)')].map((x) => x.dataset.histCh))];
 }
 $('tvCard').addEventListener('toggle', (e) => { if (e.target.id === 'histBox') histOpen = e.target.open; }, true);
@@ -1534,11 +1555,34 @@ async function tvCommand(body, reload = true) {
     if (reload) await load();
   } catch (e) { toast(e.message, true); }
 }
-$('tvCard').addEventListener('click', (e) => {
-  if (e.target.id === 'histBlock') {
-    const add = histPicked().filter((t) => !isBlocked(t)).map((title) => ({ id: '', title }));
-    if (add.length) saveBlocked([...(cfg.blockedChannels || []), ...add], `Đã chặn ${add.length} kênh`);
-    return;
+$('tvCard').addEventListener('click', async (e) => {
+  const ca = e.target.closest('button[data-chact]');
+  if (ca) {
+    e.preventDefault();
+    const box = ca.closest('.ch-act');
+    const name = box.dataset.chName;
+    if (ca.dataset.chact === 'block') return blockChannel('', name);
+    if (ca.dataset.chact === 'add') {
+      // Chọn nhóm ngay tại chỗ rồi thêm
+      if (box.nextElementSibling && box.nextElementSibling.classList.contains('ch-addpanel')) return;
+      box.insertAdjacentHTML('afterend', `<div class="row ch-addpanel" style="margin-top:8px">
+        <select class="grow" aria-label="Thêm vào nhóm">${groupOptionsHtml()}</select>
+        <button class="primary" data-chact="confirm" style="height:40px">Thêm</button></div>`);
+      return;
+    }
+    if (ca.dataset.chact === 'confirm') {
+      const panel = ca.closest('.ch-addpanel');
+      const nm = panel.previousElementSibling.dataset.chName;
+      const gid = panel.querySelector('select').value;
+      ca.disabled = true;
+      try {
+        const r = await api('POST', '/api/channels', { input: nm, groupIds: gid ? [Number(gid)] : [] });
+        panel.remove();
+        toast(`Đã thêm “${r.title}” vào FamTube`);
+        await load();
+      } catch (err) { toast(err.message, true); ca.disabled = false; }
+      return;
+    }
   }
   const blk = e.target.closest('[data-block-title]');
   if (blk) { e.preventDefault(); return blockChannel('', blk.dataset.blockTitle); }
