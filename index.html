@@ -743,7 +743,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127222848';
+const PAGE_BUILD = '20261127223344';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -1418,9 +1418,9 @@ function renderToday() {
         </div>
       </div>
       ${it.limit > 0 || win ? `<div class="note" style="margin-top:10px">${weekend ? 'Cuối tuần' : 'Ngày thường'}${it.limit > 0 ? ': ' + it.limit + ' phút' : ''}${win}</div>` : ''}
-      <div class="actions" style="grid-template-columns:repeat(3,1fr) 1.6fr">
-        ${[15, 30, 60].map((m) => `<button data-today="grant" data-min="${m}" style="padding:0">+${m}′</button>`).join('')}
-        <button data-today="reset" ${used ? '' : 'disabled'} style="padding:0 8px">Xem lại từ đầu</button>
+      <div class="actions" style="grid-template-columns:repeat(4,1fr) 44px">
+        ${[5, 15, 30, 60].map((m) => `<button data-today="grant" data-min="${m}" style="padding:0">+${m}′</button>`).join('')}
+        <button data-today="reset" ${used ? '' : 'disabled'} style="padding:0; font-size:20px" aria-label="Cho xem lại từ đầu (xóa số phút đã xem hôm nay)" title="Cho xem lại từ đầu">↺</button>
       </div>
     </div>`;
   }).join('') : '<div class="card empty">Chưa có profile trẻ em. Thêm ở tab Profile.</div>';
