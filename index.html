@@ -340,6 +340,7 @@
   .grp-card.open .grp-body { display:flex; }
   .tag { display:inline-block; font-size:11px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--soft2); color:var(--muted); margin-left:4px; vertical-align:1px; }
   .tag.warn { background:var(--warm-soft); color:var(--danger); }
+  .tag.new { background:var(--ok-soft); color:var(--ok); }
   .ch-pick { max-height:340px; overflow:auto; margin:0 -4px; padding:0 4px; }
   .ch-pick label { padding:8px 2px; }
   .ch-pick img, .ch-pick .ph { width:30px; height:30px; border-radius:50%; object-fit:cover; background:var(--ph); flex-shrink:0; }
@@ -735,7 +736,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127212742';
+const PAGE_BUILD = '20261127215244';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -1034,7 +1035,9 @@ function renderGroups() {
     const chs = g.channelIds.map((id) => byId[id]).filter(Boolean);
     const thumbs = chs.slice(0, 3).map(thumbHtml).join('') + (chs.length > 3 ? `<div class="more">+${chs.length - 3}</div>` : '');
     // Kênh đã chọn lên đầu, rồi theo tên
-    const all = [...cfg.channels].sort((x, y) => (g.channelIds.includes(y.id) - g.channelIds.includes(x.id)) || x.title.localeCompare(y.title, 'vi'));
+    const grouped = new Set(cfg.groups.flatMap((x) => x.channelIds));
+    const fresh = (c) => isNew(c) && !grouped.has(c.id);
+    const all = [...cfg.channels].sort((x, y) => (fresh(y) - fresh(x)) || (g.channelIds.includes(y.id) - g.channelIds.includes(x.id)) || newestFirst(x, y));
     return `
     <div class="card grp-card${open ? ' open' : ''}" data-i="${i}">
       <button class="grp-top" data-act="toggle" aria-expanded="${open}">
@@ -1059,13 +1062,22 @@ function renderGroups() {
         </div>
         <div class="search-box slim"><span class="sb-ico">⌕</span><input type="text" data-act="chfilter" placeholder="Lọc kênh để chọn" autocomplete="off"></div>
         <div class="checks ch-pick">${all.length ? all.map((c) => `
-          <label data-name="${esc(fold(c.title))}"><input type="checkbox" data-act="ch" value="${esc(c.id)}" ${g.channelIds.includes(c.id) ? 'checked' : ''}>${thumbHtml(c)}<span class="grow">${esc(c.title)}</span></label>`).join('')
+          <label data-name="${esc(fold(c.title))}"><input type="checkbox" data-act="ch" value="${esc(c.id)}" ${g.channelIds.includes(c.id) ? 'checked' : ''}>${thumbHtml(c)}<span class="grow">${esc(c.title)}${fresh(c) ? '<span class="tag new">Mới</span>' : ''}</span></label>`).join('')
           : '<div class="empty">Chưa có kênh nào. Thêm kênh ở trên.</div>'}</div>
       </div>
     </div>`;
   }).join('') : '<div class="card empty">Chưa có nhóm nào</div>';
 }
 
+// Kênh mới thêm (3 ngày gần đây) lên đầu; bản cũ chưa có thời điểm thêm thì xếp theo tên.
+const newestFirst = (x, y) => ((y.addedAt || 0) - (x.addedAt || 0)) || x.title.localeCompare(y.title, 'vi');
+const isNew = (c) => c.addedAt && Date.now() - c.addedAt < 3 * 86400000;
+function addedLabel(ms) {
+  const d = Math.floor((Date.now() - ms) / 86400000);
+  if (d <= 0) return 'hôm nay ' + new Date(ms).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  if (d === 1) return 'hôm qua';
+  return d < 30 ? d + ' ngày trước' : new Date(ms).toLocaleDateString('vi-VN');
+}
 let chGroup = 'all';   // lọc danh sách kênh: 'all' | 'none' | id nhóm
 function renderChannels() {
   const q = fold($('chFilter').value.trim());
@@ -1078,12 +1090,13 @@ function renderChannels() {
     if (chGroup === 'none') return !gs.length;
     if (chGroup !== 'all') return gs.some((g) => String(g.id) === chGroup);
     return true;
-  }).sort((x, y) => x.title.localeCompare(y.title, 'vi'));
+  }).sort(newestFirst);
   $('channels').innerHTML = list.length ? list.map((c) => {
     const gs = groupsOf(c.id);
     return `<div class="ch">
       ${thumbHtml(c)}
-      <div class="grow" style="min-width:0"><div class="name">${esc(c.title)}</div>
+      <div class="grow" style="min-width:0"><div class="name">${esc(c.title)}${isNew(c) && !gs.length ? '<span class="tag new">Mới</span>' : ''}</div>
+        <div class="sub" style="font-size:11.5px">${c.addedAt ? 'Thêm ' + addedLabel(c.addedAt) : ''}</div>
         <div>${gs.length ? gs.map((g) => `<span class="mini">${esc(g.name)}</span>`).join('') : '<span class="mini none">Chưa thuộc nhóm nào · chỉ người lớn thấy</span>'}</div></div>
       <button class="icon" data-del="${esc(c.id)}" data-name="${esc(c.title)}" aria-label="Xóa kênh">✕</button>
     </div>`;
