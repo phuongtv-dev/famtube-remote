@@ -735,7 +735,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127204054';
+const PAGE_BUILD = '20261127212742';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -1023,8 +1023,9 @@ const grpKey = (g, i) => g.id ? String(g.id) : 'new' + i;
 const chById = () => Object.fromEntries(cfg.channels.map((c) => [c.id, c]));
 const thumbHtml = (c) => c && c.thumbnailUrl ? `<img src="${esc(c.thumbnailUrl)}" alt="" loading="lazy">` : '<div class="ph"></div>';
 function viewersOf(g) {
-  const kids = (cfg.profiles || []).filter((p) => p.kind === 'kid' && g.id && p.groupIds.includes(g.id)).map((p) => p.name);
-  return kids.length ? kids.join(', ') + ' xem' : 'Chỉ người lớn';
+  const who = (cfg.profiles || []).filter((p) => g.id && (p.kind === 'kid' ? p.groupIds.includes(g.id) : (!p.groupIds.length || p.groupIds.includes(g.id))))
+    .map((p) => p.name);
+  return who.length ? who.join(', ') + ' xem' : 'Chưa ai xem';
 }
 function renderGroups() {
   const byId = chById();
@@ -1905,7 +1906,7 @@ function avatarHtml(p) {
 
 const pfOpen = new Set();   // id profile đang mở (profile mới chưa lưu luôn mở)
 function pfSummary(p) {
-  if (p.kind !== 'kid') return 'Người lớn' + (p.pinRequired ? ' · cần PIN' : '');
+  if (p.kind !== 'kid') return 'Người lớn' + (p.groupIds.length ? ` · ${p.groupIds.length} danh mục` : ' · tất cả danh mục') + (p.pinRequired ? ' · cần PIN' : '');
   const m = (v) => v > 0 ? v + ' phút' : 'không giới hạn';
   return `Trẻ em · ngày thường ${m(p.dailyLimitMin)} · cuối tuần ${m(p.weekendLimitMin)} · ${p.groupIds.length} nhóm`;
 }
@@ -1937,6 +1938,11 @@ function renderProfiles() {
       <div class="field">Màu đại diện
         <div class="swatches">${COLORS.map((c) => `<button class="swatch" data-pf="color" data-c="${c}" aria-label="Màu ${c}" aria-pressed="${p.color === c}" style="background:${c}"></button>`).join('')}</div>
       </div>
+      ${!kid ? `
+      <div class="field">Danh mục hiện trên tivi <span class="note">Bật nhóm muốn thấy. Không bật nhóm nào = hiện tất cả.</span>
+        <div class="checks">${cfg.groups.length ? cfg.groups.map((g) => `
+          <label><input type="checkbox" data-pf="group" value="${g.id}" ${p.groupIds.includes(g.id) ? 'checked' : ''}>${esc(g.name)}${g.hidden ? ' (ẩn)' : ''}${g.locked ? ' (khóa)' : ''}</label>`).join('') : '<div class="empty">Chưa có nhóm nào</div>'}</div>
+      </div>` : ''}
       ${kid ? `
       <div class="field">Nhóm được xem
         <div class="checks">${cfg.groups.length ? cfg.groups.map((g) => `
