@@ -735,7 +735,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127203933';
+const PAGE_BUILD = '20261127204054';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -2295,11 +2295,15 @@ async function start() {
     return;
   }
   const cached = store(CONFIG_CACHE_STORE);
-  if (cached) { try { applyConfig(JSON.parse(cached)); } catch {} }
-  setConn('', 'Đang tải…');
+  if (cached) {
+    try { applyConfig(JSON.parse(cached)); } catch {}
+    // Có bản lưu: hiện ngay sau ~1 giây (màn chờ chỉ để kịp thấy tên tivi), số liệu mới cập nhật ở nền.
+    setTimeout(() => { if (cfg.version) hideSplash(); }, 1000);
+  }
+  setConn('', cached ? 'Đang cập nhật…' : 'Đang tải…');
   try {
-    await readAlive();
-    let c = await readState(10 * 60000);
+    // Hỏi "tivi còn bật" và bản cấu hình tivi đăng sẵn cùng lúc.
+    let [, c] = await Promise.all([readAlive(), readState(10 * 60000)]);
     const viaState = !!c;
     if (!c) {
       if (cached && Date.now() - aliveAt > 4 * 60000) enterReadonly();
