@@ -321,6 +321,21 @@
   @keyframes pulse { 50% { box-shadow:0 8px 32px rgba(216,134,137,.45); } }
   .stat .ico { width:40px; height:40px; border-radius:12px; display:grid; place-items:center; font-size:20px; background:var(--accent-soft); flex-shrink:0; }
 
+  /* ---------- Thống kê ---------- */
+  .st-sum { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .st-sum b { display:block; font-size:22px; font-weight:800; letter-spacing:-.01em; }
+  .st-row { display:grid; grid-template-columns:22px 36px 1fr; gap:10px; align-items:center; padding:10px 0; }
+  .st-row + .st-row { border-top:1px solid var(--line); }
+  .st-rank { font-size:13px; font-weight:700; color:var(--muted); text-align:center; }
+  .st-row img, .st-row .ph { width:36px; height:36px; border-radius:50%; object-fit:cover; background:var(--ph); }
+  .st-top { display:flex; justify-content:space-between; gap:8px; align-items:baseline; }
+  .st-top .name { font-weight:600; font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .st-top .val { font-size:13px; font-weight:700; white-space:nowrap; }
+  .st-top .val small { font-weight:500; color:var(--muted); margin-left:4px; }
+  .st-bar { height:6px; border-radius:6px; background:var(--track); margin-top:6px; overflow:hidden; }
+  .st-bar > div { height:100%; border-radius:6px; background:var(--accent); }
+  .st-row .ch-act { margin-top:6px; }
+
   /* ---------- Nội dung ---------- */
   .search-box { display:flex; align-items:center; gap:8px; padding:4px 4px 4px 14px; border-radius:14px; background:var(--field); border:1px solid var(--field-border); }
   .search-box:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
@@ -384,7 +399,7 @@
   .savebar span { color:#fff; font-size:14px; flex:1; padding-left:8px; }
   .savebar button { height:40px; }
   .savebar button:not(.primary) { background:rgba(255,255,255,.1); color:#fff; }
-  nav.tabbar { position:fixed; left:0; right:0; bottom:0; z-index:30; display:grid; grid-template-columns:repeat(4,1fr);
+  nav.tabbar { position:fixed; left:0; right:0; bottom:0; z-index:30; display:grid; grid-template-columns:repeat(5,1fr);
                padding:6px 6px env(safe-area-inset-bottom); background:var(--tab-bg); border-top:1px solid var(--glass-border);
                -webkit-backdrop-filter:saturate(1.6) blur(16px); backdrop-filter:saturate(1.6) blur(16px); }
   nav.tabbar button { height:var(--tabbar); background:none; border-radius:12px; display:flex; flex-direction:column; align-items:center;
@@ -496,6 +511,19 @@
     <div class="chips" id="chGroupFilter" style="margin:10px 0"></div>
     <div class="card" id="channels"></div>
   </div>
+</section>
+
+<!-- ===================== THỐNG KÊ ===================== -->
+<section class="tab" id="tab-stats" data-title="Thống kê">
+  <div class="seg" style="margin-top:8px" id="stRange">
+    <button data-days="1" aria-pressed="false">Hôm nay</button>
+    <button data-days="7" aria-pressed="true">7 ngày</button>
+    <button data-days="30" aria-pressed="false">30 ngày</button>
+  </div>
+  <div class="chips" id="stWho" style="margin:12px 0"></div>
+  <div class="card" id="stSummary"></div>
+  <div class="card" id="stList"><div class="empty">Đang tải…</div></div>
+  <div class="note" style="margin:0 4px">Tính theo thời gian thật sự xem (video đang phát), gồm cả YouTube mở trực tiếp và app khác như Netflix. Bắt đầu đếm từ bản 0.22.</div>
 </section>
 
 <!-- ===================== PROFILE ===================== -->
@@ -728,6 +756,8 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Hôm nay</button>
   <button role="tab" data-tab="content" aria-selected="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="3"/><path d="M10.5 9.5v4.5l4-2.25z" fill="currentColor"/></svg>Nội dung</button>
+  <button role="tab" data-tab="stats" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Thống kê</button>
   <button role="tab" data-tab="profiles" aria-selected="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.4.2 4 1.8 4.5 4.5"/></svg>Profile</button>
   <button role="tab" data-tab="settings" aria-selected="false">
@@ -743,7 +773,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127223344';
+const PAGE_BUILD = '20261127223957';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -1022,6 +1052,7 @@ function render() {
   if (!$('minDur').value) $('minDur').value = '180';
   $('safeSearch').checked = cfg.safeSearch !== false;
   renderGuard();
+  if (stCache[stDays]) renderStats();   // tên con / kênh đã có: vẽ lại thống kê khi cấu hình mới về
   $('pinState').textContent = cfg.hasPin ? 'Đã đặt · nhập mã mới để đổi' : 'Chưa đặt · nên đặt để con không tự mở khóa';
 }
 
@@ -1470,12 +1501,13 @@ function fmtClock(ms) { return new Date(ms).toLocaleTimeString('vi-VN', { hour: 
 function fmtDur(sec) { const m = Math.floor(sec / 60), s = sec % 60; return `${m}:${String(s).padStart(2, '0')}`; }
 // Nút cho một kênh vừa xem: thêm vào FamTube (chọn nhóm) / chặn trong YouTube. Chỉ có tên kênh (YouTube không cho mã kênh).
 const inFamTube = (name) => !!name && (cfg.channels || []).some((c) => fold(c.title) === fold(name));
-function chActions(name, compact) {
+function chActions(name, compact, short) {
   if (!name) return '';
   const added = inFamTube(name), blocked = isBlocked(name);
+  if (short && added) return '';   // thống kê: kênh đã có trong FamTube thì không cần nút
   return `<div class="ch-act${compact ? ' compact' : ''}" data-ch-name="${esc(name)}">
-    ${added ? '<span class="mini">✓ Có trong FamTube</span>' : blocked ? '' : '<button class="pill add" data-chact="add">＋ Thêm vào FamTube</button>'}
-    ${blocked ? '<span class="mini none" style="color:var(--danger)">⛔ Đã chặn</span>' : added ? '' : '<button class="pill blk" data-chact="block">⛔ Chặn kênh</button>'}
+    ${added ? '<span class="mini">✓ Có trong FamTube</span>' : blocked ? '' : `<button class="pill add" data-chact="add">＋ ${short ? 'Thêm' : 'Thêm vào FamTube'}</button>`}
+    ${blocked ? '<span class="mini none" style="color:var(--danger)">⛔ Đã chặn</span>' : added ? '' : `<button class="pill blk" data-chact="block">⛔ ${short ? 'Chặn' : 'Chặn kênh'}</button>`}
   </div>`;
 }
 function renderTv() {
@@ -1555,9 +1587,10 @@ async function tvCommand(body, reload = true) {
     if (reload) await load();
   } catch (e) { toast(e.message, true); }
 }
-$('tvCard').addEventListener('click', async (e) => {
+async function onChAct(e) {
   const ca = e.target.closest('button[data-chact]');
-  if (ca) {
+  if (!ca) return false;
+  {
     e.preventDefault();
     const box = ca.closest('.ch-act');
     const name = box.dataset.chName;
@@ -1580,10 +1613,15 @@ $('tvCard').addEventListener('click', async (e) => {
         panel.remove();
         toast(`Đã thêm “${r.title}” vào FamTube`);
         await load();
+        renderStats();
       } catch (err) { toast(err.message, true); ca.disabled = false; }
-      return;
+      return true;
     }
   }
+  return true;
+}
+$('tvCard').addEventListener('click', async (e) => {
+  if (await onChAct(e)) return;
   const blk = e.target.closest('[data-block-title]');
   if (blk) { e.preventDefault(); return blockChannel('', blk.dataset.blockTitle); }
   const b = e.target.closest('button[data-tv]');
@@ -1610,6 +1648,64 @@ $('tvCard').addEventListener('click', async (e) => {
     case 'unlock': return tvCommand({ action: 'lock', minutes: 0 });
   }
 });
+
+// ================= Thống kê: kênh xem nhiều nhất =================
+let stDays = 7, stWho = 'all', stCache = {};
+function fmtSec(sec) {
+  const m = Math.round(sec / 60);
+  if (m < 1) return '<1 phút';
+  return m >= 60 ? `${Math.floor(m / 60)} giờ${m % 60 ? ' ' + (m % 60) + ' phút' : ''}` : `${m} phút`;
+}
+async function loadStats(force) {
+  if (!force && stCache[stDays]) return renderStats();
+  $('stList').innerHTML = '<div class="empty">Đang tải từ tivi…</div>';
+  try { stCache[stDays] = await apiCall('GET', '/api/stats?days=' + stDays); renderStats(); }
+  catch (e) { $('stList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function renderStats() {
+  const d = stCache[stDays];
+  if (!d) return;
+  const by = d.byBucket || {};
+  const names = Object.fromEntries((cfg.profiles || []).map((p) => [String(p.id), p.name]));
+  const buckets = Object.keys(by).filter((b) => Object.values(by[b]).some((v) => v > 0));
+  $('stWho').innerHTML = [['all', 'Cả nhà'], ...buckets.map((b) => [b, b === '0' ? 'Xem chung' : (names[b] || 'Profile ' + b)])]
+    .map(([k, n]) => `<button data-who="${esc(k)}" aria-pressed="${stWho === k}">${esc(n)}</button>`).join('');
+  if (stWho !== 'all' && !buckets.includes(stWho)) stWho = 'all';
+  // Gộp theo kênh, sắp xếp giảm dần
+  const tot = {};
+  for (const b of (stWho === 'all' ? buckets : [stWho])) for (const [ch, sec] of Object.entries(by[b])) tot[ch] = (tot[ch] || 0) + sec;
+  const rows = Object.entries(tot).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  const total = rows.reduce((a, [, v]) => a + v, 0);
+  const label = stDays === 1 ? 'hôm nay' : stDays + ' ngày qua';
+  $('stSummary').innerHTML = `<div class="st-sum">
+    <div><div class="sub">Tổng thời gian ${label}</div><b>${total ? fmtSec(total) : '0 phút'}</b></div>
+    <div><div class="sub">Số kênh đã xem</div><b>${rows.length}</b></div></div>`;
+  const max = rows.length ? rows[0][1] : 1;
+  $('stList').innerHTML = rows.length ? rows.map(([ch, sec], i) => {
+    const pct = total ? sec / total * 100 : 0;
+    const th = (d.thumbs || {})[ch];
+    return `<div class="st-row" title="${esc(ch)}: ${fmtSec(sec)} (${pct.toFixed(1)}%)">
+      <div class="st-rank">${i + 1}</div>
+      ${th ? `<img src="${esc(th)}" alt="" loading="lazy">` : '<div class="ph"></div>'}
+      <div style="min-width:0">
+        <div class="st-top"><span class="name">${esc(ch)}</span><span class="val">${pct < 1 ? '<1' : Math.round(pct)}%<small>${fmtSec(sec)}</small></span></div>
+        <div class="st-bar"><div style="width:${Math.max(2, sec / max * 100)}%"></div></div>
+        ${ch !== 'Không rõ kênh' && !(cfg.apps || []).some((a) => a.label === ch) ? chActions(ch, true, true) : ''}
+      </div></div>`;
+  }).join('') : `<div class="empty">Chưa có dữ liệu ${label}. Tivi bắt đầu đếm từ lúc cài bản này.</div>`;
+}
+$('stRange').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-days]');
+  if (!b) return;
+  $('stRange').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  stDays = Number(b.dataset.days); loadStats();
+});
+$('stWho').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-who]');
+  if (!b) return;
+  stWho = b.dataset.who; renderStats();
+});
+$('stList').addEventListener('click', (e) => onChAct(e));
 
 // ================= Chặn kênh trong YouTube =================
 async function saveBlocked(list, msg) {
@@ -1797,6 +1893,7 @@ function showTab(name) {
   $('pageTitle').textContent = $('tab-' + name).dataset.title;
   window.scrollTo(0, 0);
   store('famtubeTab', name);
+  if (name === 'stats') loadStats();
 }
 document.querySelectorAll('nav.tabbar button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 $('contentSeg').addEventListener('click', (e) => {
