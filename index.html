@@ -667,7 +667,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127194341';
+const PAGE_BUILD = '20261127194802';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -1127,7 +1127,7 @@ function renderToday() {
   const askWho = !cfg.extras || cfg.extras.askWhoWatches !== false;
   if (!askWho && (g.allowDirect || u['0'])) items.push({ id: '0', name: 'Xem chung (không chọn con)', color: '#E8EBFE', icon: '▶',
     limit: weekend ? g.directWeekendMin : g.directDailyMin, start: g.directWindowStart, end: g.directWindowEnd });
-  setHTML($('todayKids'), items.length ? items.map((it) => {
+  const kidsHtml = items.length ? items.map((it) => {
     const used = u[it.id] || 0;
     const grant = grants[it.id] || 0;   // phút cho thêm hôm nay (cộng vào giới hạn)
     if (it.limit > 0) it.limit += grant;
@@ -1157,15 +1157,18 @@ function renderToday() {
         <button data-today="reset" ${used ? '' : 'disabled'} style="padding:0 8px">Xem lại từ đầu</button>
       </div>
     </div>`;
-  }).join('') : '<div class="card empty">Chưa có profile trẻ em. Thêm ở tab Profile.</div>');
+  }).join('') : '<div class="card empty">Chưa có profile trẻ em. Thêm ở tab Profile.</div>';
+  let statsHtml = '';
   const st = cfg.statsToday;
   if (st && (st.videos || Object.keys(st.blocked || {}).length)) {
     const top = (st.top || []).slice(0, 3).map((t) => `${esc(t.channel)} (${t.count})`).join(', ');
     const bl = Object.values(st.blocked || {}).reduce((a, b) => a + b, 0);
-    $('todayKids').insertAdjacentHTML('beforeend', `<div class="card"><div class="stat"><div class="ico">📊</div><div class="grow">
+    statsHtml = `<div class="card"><div class="stat"><div class="ico">📊</div><div class="grow">
       <div class="card-title">Hôm nay ${st.videos} video${bl ? ` · bị chặn ${bl} lần` : ''}</div>
-      <div class="sub">${top ? 'Xem nhiều: ' + top : ''}</div></div></div></div>`);
+      <div class="sub">${top ? 'Xem nhiều: ' + top : ''}</div></div></div></div>`;
   }
+  // Vẽ một lần cả thẻ giờ xem lẫn thẻ thống kê (setHTML bỏ qua khi không đổi, nên không được nối thêm sau đó).
+  setHTML($('todayKids'), kidsHtml + statsHtml);
   $('todayNote').textContent = cfg.adultActive ? 'Người lớn đang dùng YouTube tự do trên tivi (không tính giờ, không chặn Shorts).' : '';
 }
 $('todayKids').addEventListener('click', async (e) => {
