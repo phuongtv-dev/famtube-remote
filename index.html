@@ -257,6 +257,21 @@
   .badge { display:inline-block; font-size:12px; font-weight:600; padding:3px 9px; border-radius:999px; background:var(--ok-soft); color:var(--ok); }
   .badge.warn { background:var(--warm-soft); color:var(--danger); }
   .badge.info { background:var(--accent-soft); color:var(--accent); }
+  button.bonus-x { height:auto; border:0; font:600 12px/1.45 inherit; padding:3px 9px; border-radius:999px; cursor:pointer; }
+  button.bonus-x:hover { background:var(--warm-soft); color:var(--danger); }
+  /* Biểu đồ 7 ngày: mỗi con một hàng cột (cùng thang), vạch đứt = giới hạn */
+  .wk-kid + .wk-kid { margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
+  .wk-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:14px; }
+  .wk-head b { font-weight:700; }
+  .wk-plot { position:relative; height:84px; display:grid; grid-template-columns:repeat(7,1fr); gap:6px; align-items:end; margin-top:16px; }
+  .wk-bar { position:relative; height:100%; display:flex; align-items:flex-end; justify-content:center; }
+  .wk-bar > i { display:block; width:100%; max-width:26px; min-height:2px; border-radius:4px 4px 0 0; background:var(--accent); opacity:.85; }
+  .wk-bar.today > i { opacity:1; }
+  .wk-bar.over > i { background:var(--warm); }
+  .wk-bar > span { position:absolute; bottom:calc(var(--h) + 3px); font-size:11px; font-weight:600; color:var(--ink); white-space:nowrap; }
+  .wk-limit { position:absolute; left:0; right:0; border-top:1.5px dashed var(--muted); opacity:.55; pointer-events:none; }
+  .wk-days { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:4px; text-align:center; font-size:11px; color:var(--muted); }
+  .wk-days .today { color:var(--ink); font-weight:700; }
   .actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
   .stat { display:flex; align-items:center; gap:12px; }
   .tv-now { display:flex; gap:12px; align-items:flex-start; }
@@ -667,7 +682,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127194802';
+const PAGE_BUILD = '20261127195615';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -677,6 +692,9 @@ async function checkPageUpdate() {
   } catch {}
 }
 checkPageUpdate();
+if (window.FAMTUBE_REMOTE && location.protocol === 'https:' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkPageUpdate(); });
 // Trang online: không có token tivi, lệnh đi qua repo GitHub riêng tư (xem RemoteRelay.kt trên tivi).
 const REMOTE = !token && window.FAMTUBE_REMOTE ? window.FAMTUBE_REMOTE : null;
@@ -741,11 +759,13 @@ async function remoteApi(method, path, body) {
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`;
   const req = { method, path, body: body === undefined ? null : JSON.stringify(body), at: Date.now() };
   await gh('PUT', `contents/req/${id}`, { message: `điện thoại: ${method} ${path}`, content: toB64(JSON.stringify(req)) });
+  // Rung chuông cho tivi (ntfy): tivi đọc thẳng lệnh này thay vì đợi vòng hỏi GitHub. Lỗi thì tivi vẫn tự hỏi.
+  if (cfg && cfg.ntfyTopic) fetch(`https://ntfy.sh/${encodeURIComponent(cfg.ntfyTopic)}-cmd`, { method: 'POST', body: id }).catch(() => {});
   const until = Date.now() + 45000;
-  let wait = 1200;
+  let wait = 700;
   while (Date.now() < until) {
     await sleep(wait);
-    wait = 900;
+    wait = Date.now() - (until - 45000) < 8000 ? 600 : 1000;
     const f = await gh('GET', `contents/res/${id}`);
     if (!f) continue;
     const text = f.content ? fromB64(f.content) : await gh('GET', `contents/res/${id}`, undefined, true);
@@ -1113,6 +1133,41 @@ async function handleApproveFromQr() {
   if (confirm(`Cho phép ${title} trên tivi?`)) await sendApproval(id, true);
 }
 
+// 7 ngày gần nhất: mỗi con một hàng cột cùng thang (so được giữa các con), vạch đứt = giới hạn ngày thường.
+function weekHtml() {
+  const wk = cfg.usageWeek || [];
+  const kids = (cfg.profiles || []).filter((p) => p.kind === 'kid');
+  if (wk.length < 2 || !kids.length) return '';
+  const DOW = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  const days = wk.map((d) => { const dt = new Date(d.day + 'T12:00:00'); return { ...d, dow: DOW[dt.getDay()], weekend: [0, 6].includes(dt.getDay()) }; });
+  const val = (d, id) => (d.usage || {})[id] || 0;
+  const limitOf = (p, d) => d.weekend ? p.weekendLimitMin : p.dailyLimitMin;
+  const max = Math.max(30, ...kids.flatMap((p) => days.map((d) => Math.max(val(d, p.id), limitOf(p, d) || 0))));
+  const pct = (m) => Math.round(m / max * 100);
+  const rows = kids.map((p) => {
+    const vals = days.map((d) => val(d, p.id));
+    const total = vals.reduce((a, b) => a + b, 0);
+    const watched = vals.filter((v) => v > 0).length;
+    const overDays = days.filter((d, i) => limitOf(p, d) > 0 && vals[i] > limitOf(p, d)).length;
+    const peak = Math.max(...vals);
+    const bars = days.map((d, i) => {
+      const v = vals[i], lim = limitOf(p, d), today = i === days.length - 1;
+      const over = lim > 0 && v > lim;
+      const showLabel = v > 0 && (today || v === peak);
+      return `<div class="wk-bar${today ? ' today' : ''}${over ? ' over' : ''}" style="--h:${pct(v)}%" title="${d.dow} ${d.day.slice(8)}/${d.day.slice(5, 7)}: ${v} phút${lim > 0 ? ' / giới hạn ' + lim : ''}${over ? ' (quá giờ)' : ''}">
+        <i style="height:${pct(v)}%"></i>${showLabel ? `<span>${v}</span>` : ''}</div>`;
+    }).join('');
+    const lim = p.dailyLimitMin > 0 ? `<div class="wk-limit" style="bottom:${pct(p.dailyLimitMin)}%" title="Giới hạn ngày thường ${p.dailyLimitMin} phút"></div>` : '';
+    return `<div class="wk-kid">
+      <div class="wk-head"><b>${esc(p.name)}</b><span class="sub">${fmtMin(total)} · TB ${watched ? Math.round(total / 7) : 0} phút/ngày${overDays ? ` · <span style="color:var(--danger)">quá giờ ${overDays} ngày</span>` : ''}</span></div>
+      <div class="wk-plot" role="img" aria-label="${esc(p.name)}: ${days.map((d, i) => `${d.dow} ${vals[i]} phút`).join(', ')}">${lim}${bars}</div>
+      <div class="wk-days">${days.map((d, i) => `<div class="${i === days.length - 1 ? 'today' : ''}">${i === days.length - 1 ? 'Nay' : d.dow}</div>`).join('')}</div>
+    </div>`;
+  }).join('');
+  return `<div class="card"><div class="card-title">7 ngày qua</div>
+    <div class="note" style="margin-bottom:2px">Phút xem mỗi ngày · vạch đứt: giới hạn ngày thường · cột cam: quá giờ (gồm cả phút thưởng)</div>${rows}</div>`;
+}
+
 function renderToday() {
   renderApproval();
   renderTv();
@@ -1135,7 +1190,7 @@ function renderToday() {
     const pct = it.limit > 0 ? Math.min(100, Math.round(used / it.limit * 100)) : 0;
     const over = left === 0;
     const color = over ? 'var(--danger)' : pct >= 80 ? 'var(--warm)' : 'var(--accent)';
-    const extra = grant ? `<span class="badge info">+${grant} phút thưởng</span> ` : '';
+    const extra = grant ? `<button class="badge info bonus-x" data-today="ungrant" data-min="${grant}" aria-label="Bỏ ${grant} phút thưởng">+${grant} phút thưởng ✕</button> ` : '';
     const badge = extra + (
       it.limit <= 0 ? '<span class="badge">Không giới hạn</span>'
       : over ? '<span class="badge warn">Hết giờ hôm nay</span>'
@@ -1167,8 +1222,8 @@ function renderToday() {
       <div class="card-title">Hôm nay ${st.videos} video${bl ? ` · bị chặn ${bl} lần` : ''}</div>
       <div class="sub">${top ? 'Xem nhiều: ' + top : ''}</div></div></div></div>`;
   }
-  // Vẽ một lần cả thẻ giờ xem lẫn thẻ thống kê (setHTML bỏ qua khi không đổi, nên không được nối thêm sau đó).
-  setHTML($('todayKids'), kidsHtml + statsHtml);
+  // Vẽ một lần cả thẻ giờ xem, thống kê, tuần (setHTML bỏ qua khi không đổi, nên không được nối thêm sau đó).
+  setHTML($('todayKids'), kidsHtml + statsHtml + weekHtml());
   $('todayNote').textContent = cfg.adultActive ? 'Người lớn đang dùng YouTube tự do trên tivi (không tính giờ, không chặn Shorts).' : '';
 }
 $('todayKids').addEventListener('click', async (e) => {
@@ -1181,6 +1236,14 @@ $('todayKids').addEventListener('click', async (e) => {
       const min = Number(btn.dataset.min || 15);
       await api('PUT', '/api/settings', { grant: id, grantMin: min });
       toast(`Đã thưởng ${name} thêm ${min} phút`);
+    } else if (btn.dataset.today === 'ungrant') {
+      const have = Number(btn.dataset.min || 0);
+      const ans = prompt(`Bớt bao nhiêu phút thưởng của ${name}? (đang có ${have} phút)`, String(have));
+      if (ans === null) return;
+      const min = Math.min(have, Math.max(0, Math.round(Number(ans) || 0)));
+      if (!min) return;
+      await api('PUT', '/api/settings', { grant: id, grantMin: -min });
+      toast(`Đã bớt ${min} phút thưởng của ${name}`);
     } else {
       if (!confirm(`Xóa số phút ${name} đã xem hôm nay? Sẽ được xem lại đủ giới hạn ngày.`)) return;
       await api('PUT', '/api/settings', { resetUsage: id });
