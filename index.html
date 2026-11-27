@@ -696,7 +696,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127201806';
+const PAGE_BUILD = '20261127203616';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -770,14 +770,72 @@ document.addEventListener('touchend', (e) => {
 }, { passive: false });
 window.addEventListener('error', (e) => reportError('window', e.error || e.message));
 window.addEventListener('unhandledrejection', (e) => reportError('promise', e.reason));
+// ---------- Đường nhanh: lệnh + trả lời qua ntfy, mã hóa AES-GCM bằng khóa của tivi (cfg.relayKey) ----------
+// Khóa chỉ có trong cấu hình ở repo riêng tư; tin trên ntfy là dữ liệu đã mã hóa. Không được thì đi GitHub như cũ.
+let relay = null;
+const u8 = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const b64u8 = (bytes) => { let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(bin); };
+async function relayInit() {
+  if (!REMOTE || relay || !cfg.relayKey || !cfg.ntfyTopic || !window.crypto?.subtle || !window.EventSource) return;
+  relay = { pending: new Map(), topic: cfg.ntfyTopic };
+  try {
+    relay.key = await crypto.subtle.importKey('raw', u8(cfg.relayKey), 'AES-GCM', false, ['encrypt', 'decrypt']);
+    relay.es = new EventSource(`https://ntfy.sh/${encodeURIComponent(relay.topic)}-res/sse`);
+    relay.es.onmessage = (ev) => {
+      let o = null;
+      try { o = JSON.parse(ev.data); } catch { return; }
+      const mm = /^(e1|gh|att):([0-9]+-[a-z0-9]+):?([\s\S]*)$/.exec(o.message || '');
+      const done = mm && relay.pending.get(mm[2]);
+      if (done) done({ kind: mm[1], payload: mm[3], url: o.attachment && o.attachment.url });
+    };
+  } catch { relay = null; }
+}
+async function relayCall(id, method, path, bodyStr) {
+  if (!relay || !relay.key || !relay.es || relay.es.readyState !== 1) return null;
+  const z = 'DecompressionStream' in window;
+  const plain = new TextEncoder().encode(JSON.stringify({ id, method, path, body: bodyStr, at: Date.now(), z }));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, relay.key, plain));
+  const sealed = new Uint8Array(iv.length + ct.length); sealed.set(iv); sealed.set(ct, iv.length);
+  const msg = 'e1:' + b64u8(sealed);
+  if (msg.length > 3900) return null;   // to quá (vd. ảnh): đi GitHub
+  const got = new Promise((resolve) => { relay.pending.set(id, resolve); setTimeout(() => resolve(null), 6000); });
+  try { await fetch(`https://ntfy.sh/${encodeURIComponent(relay.topic)}-cmd`, { method: 'POST', body: msg }); }
+  catch { relay.pending.delete(id); return null; }
+  const r = await got;
+  relay.pending.delete(id);
+  if (!r) return null;
+  if (r.kind === 'gh') return 'gh';
+  // Trả lời to: tệp đính kèm trên ntfy (đã mã hóa)
+  if (r.kind === 'att') r.payload = (await (await fetch(r.url)).text()).trim();
+  const all = u8(r.payload);
+  let bytes = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: all.slice(0, 12) }, relay.key, all.slice(12)));
+  if (z) bytes = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+function finishRemote(r) {
+  let data = {};
+  try { data = JSON.parse(r.body || '{}'); } catch {}
+  if (r.status >= 400) throw new Error(data.error || ('Lỗi ' + r.status));
+  if (r.config) { try { freshConfig = { at: Date.now(), data: JSON.parse(r.config) }; } catch {} }
+  return data;
+}
+
 async function remoteApi(method, path, body) {
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`;
-  const req = { method, path, body: body === undefined ? null : JSON.stringify(body), at: Date.now() };
-  await gh('PUT', `contents/req/${id}`, { message: `điện thoại: ${method} ${path}`, content: toB64(JSON.stringify(req)) });
-  // Rung chuông cho tivi (ntfy): tivi đọc thẳng lệnh này thay vì đợi vòng hỏi GitHub. Lỗi thì tivi vẫn tự hỏi.
-  if (cfg && cfg.ntfyTopic) fetch(`https://ntfy.sh/${encodeURIComponent(cfg.ntfyTopic)}-cmd`, { method: 'POST', body: id }).catch(() => {});
+  const base = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const id = base + '.json';
+  const bodyStr = body === undefined ? null : JSON.stringify(body);
+  // 1) Đường nhanh (~1 giây). 2) Không được: hộp thư GitHub (~5 giây), cùng mã lệnh nên tivi không chạy hai lần.
+  const fast = await relayCall(base, method, path, bodyStr).catch(() => null);
+  if (fast && fast !== 'gh') return finishRemote(fast);
+  if (fast !== 'gh') {
+    const req = { method, path, body: bodyStr, at: Date.now() };
+    await gh('PUT', `contents/req/${id}`, { message: `điện thoại: ${method} ${path}`, content: toB64(JSON.stringify(req)) });
+    // Rung chuông cho tivi (ntfy): tivi đọc thẳng lệnh này thay vì đợi vòng hỏi GitHub. Lỗi thì tivi vẫn tự hỏi.
+    if (cfg && cfg.ntfyTopic) fetch(`https://ntfy.sh/${encodeURIComponent(cfg.ntfyTopic)}-cmd`, { method: 'POST', body: id }).catch(() => {});
+  }
   const until = Date.now() + 45000;
-  let wait = 700;
+  let wait = fast === 'gh' ? 300 : 700;
   while (Date.now() < until) {
     await sleep(wait);
     wait = Date.now() - (until - 45000) < 8000 ? 600 : 1000;
@@ -785,12 +843,7 @@ async function remoteApi(method, path, body) {
     if (!f) continue;
     const text = f.content ? fromB64(f.content) : await gh('GET', `contents/res/${id}`, undefined, true);
     gh('DELETE', `contents/res/${id}`, { message: `điện thoại đã đọc ${id}`, sha: f.sha }).catch(() => {});
-    const r = JSON.parse(text);
-    let data = {};
-    try { data = JSON.parse(r.body || '{}'); } catch {}
-    if (r.status >= 400) throw new Error(data.error || ('Lỗi ' + r.status));
-    if (r.config) { try { freshConfig = { at: Date.now(), data: JSON.parse(r.config) }; } catch {} }
-    return data;
+    return finishRemote(JSON.parse(text));
   }
   // Tivi không nhận: rút lệnh lại để lúc bật tivi không chạy lệnh cũ.
   gh('GET', `contents/req/${id}`).then((f) => f && gh('DELETE', `contents/req/${id}`, { message: 'hủy lệnh', sha: f.sha })).catch(() => {});
@@ -892,6 +945,7 @@ async function fetchConfig() {
 async function load() {
   try {
     cfg = await fetchConfig();
+    relayInit();
     store(CONFIG_CACHE_STORE, JSON.stringify(cfg));
     if (cfg.tvName) store('famtubeTvName', cfg.tvName);
     groups = cfg.groups.map((g) => ({ ...g, channelIds: [...g.channelIds] }));
@@ -2058,6 +2112,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && RE
 // Trang online: hiện ngay cấu hình lần trước (lưu trong máy) trong lúc chờ tivi trả lời.
 function applyConfig(c) {
   cfg = c;
+  relayInit();
   if (cfg.tvName) store('famtubeTvName', cfg.tvName);
   groups = cfg.groups.map((g) => ({ ...g, channelIds: [...g.channelIds] }));
   profiles = (cfg.profiles || []).map((p) => ({ ...p, groupIds: [...p.groupIds] }));
