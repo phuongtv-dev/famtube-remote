@@ -343,8 +343,8 @@
   .thumbs > * + * { margin-left:-12px; }
   .thumbs .more { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-size:10.5px; font-weight:700;
                   background:var(--soft2); color:var(--muted); border:2px solid var(--card); margin-left:-12px; }
-  .grp-body { display:none; padding:12px 14px 14px; border-top:1px solid var(--line); flex-direction:column; gap:12px; }
-  .grp-card.open .grp-body { display:flex; }
+  .gc-body { display:none; padding:12px 14px 14px; border-top:1px solid var(--line); flex-direction:column; gap:12px; }
+  .grp-card.open .gc-body { display:flex; }
   .tag { display:inline-block; font-size:11px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--soft2); color:var(--muted); margin-left:4px; vertical-align:1px; }
   .tag.warn { background:var(--warm-soft); color:var(--danger); }
   .tag.new { background:var(--ok-soft); color:var(--ok); }
@@ -743,7 +743,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127215847';
+const PAGE_BUILD = '20261127222848';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -1055,7 +1055,7 @@ function renderGroups() {
         </div>
         <span class="chev"></span>
       </button>
-      <div class="grp-body">
+      <div class="gc-body">
         <div class="group-head">
           <input type="text" value="${esc(g.name)}" data-act="name" aria-label="Tên nhóm">
           <button class="icon" data-act="up" ${i === 0 ? 'disabled' : ''} aria-label="Lên">↑</button>
@@ -1164,7 +1164,7 @@ $('groups').addEventListener('click', (e) => {
 $('groups').addEventListener('input', (e) => {
   if (e.target.dataset.act === 'chfilter') {
     const q = fold(e.target.value.trim());
-    e.target.closest('.grp-body').querySelectorAll('.ch-pick label').forEach((l) => { l.style.display = !q || l.dataset.name.includes(q) ? '' : 'none'; });
+    e.target.closest('.gc-body').querySelectorAll('.ch-pick label').forEach((l) => { l.style.display = !q || l.dataset.name.includes(q) ? '' : 'none'; });
     return;
   }
   if (e.target.dataset.act !== 'name') return;
