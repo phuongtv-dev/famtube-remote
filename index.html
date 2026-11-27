@@ -245,6 +245,15 @@
   .sp-actions { display:flex; flex-direction:column; gap:8px; width:100%; }
   .sp-actions[hidden] { display:none; }
 
+  /* ---------- Mất kết nối tivi: vẫn xem số liệu lần trước, khóa thao tác ---------- */
+  .ro-banner { display:flex; align-items:center; gap:12px; margin:8px 0 12px; padding:12px 14px; border-radius:16px; font-size:14px;
+               background:var(--warm-soft); border:1px solid rgba(194,65,75,.25); color:var(--ink); }
+  .ro-banner[hidden] { display:none; }
+  .ro-banner > span { font-size:22px; }
+  .ro-banner button { height:36px; flex-shrink:0; }
+  body.readonly main button:not(.ro-ok):not(.pf-top), body.readonly main input, body.readonly main select,
+  body.readonly main textarea, body.readonly .savebar { pointer-events:none; opacity:.45; }
+
   /* ---------- Hôm nay ---------- */
   .kid { display:flex; gap:14px; align-items:center; }
   .ring { --p:0; --c:var(--accent); width:64px; height:64px; border-radius:50%; flex-shrink:0; display:grid; place-items:center;
@@ -387,6 +396,11 @@
 </div>
 
 <main>
+<div id="roBanner" class="ro-banner" hidden>
+  <span>📴</span>
+  <div class="grow"><b>Chưa kết nối được tivi</b><div class="sub" id="roText">Đang xem số liệu lần trước · chỉ xem, chưa thao tác được</div></div>
+  <button class="ro-ok" id="roRetry">Thử lại</button>
+</div>
 <!-- ===================== HÔM NAY ===================== -->
 <section class="tab active" id="tab-today" data-title="Hôm nay">
   <div id="approvalCard"></div>
@@ -682,7 +696,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127200113';
+const PAGE_BUILD = '20261127201227';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -701,6 +715,7 @@ const REMOTE = !token && window.FAMTUBE_REMOTE ? window.FAMTUBE_REMOTE : null;
 const REMOTE_TOKEN_STORE = 'famtubeGithubToken';
 const CONFIG_CACHE_STORE = 'famtubeConfigCache';
 function store(k, v) {
+  if (k === 'famtubeConfigCache' && v) { try { localStorage.setItem('famtubeCacheAt', String(Date.now())); } catch {} }
   try {
     if (v === undefined) return localStorage.getItem(k) || '';
     if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v);
@@ -811,6 +826,7 @@ function setBusy(on, method) {
   }
 }
 async function api(method, path, body) {
+  if (readonly && method !== 'GET') throw new Error('Chưa kết nối được tivi: đang chỉ xem số liệu lần trước');
   setBusy(true, method);
   try { return await apiCall(method, path, body); }
   finally { setBusy(false); }
@@ -876,7 +892,7 @@ async function fetchConfig() {
 async function load() {
   try {
     cfg = await fetchConfig();
-    if (REMOTE) store(CONFIG_CACHE_STORE, JSON.stringify(cfg));
+    store(CONFIG_CACHE_STORE, JSON.stringify(cfg));
     if (cfg.tvName) store('famtubeTvName', cfg.tvName);
     groups = cfg.groups.map((g) => ({ ...g, channelIds: [...g.channelIds] }));
     profiles = (cfg.profiles || []).map((p) => ({ ...p, groupIds: [...p.groupIds] }));
@@ -1568,10 +1584,51 @@ function setConn(state, text) {
   if (!$('splash').classList.contains('hide') && !$('splash').classList.contains('err')) $('splashText').textContent = text;
 }
 
+// Không kết nối được tivi: hiện số liệu lần trước, khóa mọi thao tác, tự thử kết nối lại.
+let readonly = false, roTimer = null;
+function setReadonly(on) {
+  readonly = on;
+  document.body.classList.toggle('readonly', on);
+  $('roBanner').hidden = !on;
+  if (on) {
+    const at = Number(store('famtubeCacheAt')) || cfg.publishedAt || 0;
+    $('roText').textContent = (at ? `Đang xem số liệu lúc ${new Date(at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}` : 'Đang xem số liệu lần trước')
+      + ' · chỉ xem, chưa thao tác được';
+    if (!roTimer) roTimer = setInterval(tryReconnect, 30000);
+  } else if (roTimer) { clearInterval(roTimer); roTimer = null; }
+}
+function enterReadonly() {
+  const cached = store(CONFIG_CACHE_STORE);
+  if (!cached) return false;
+  if (!cfg.version) { try { applyConfig(JSON.parse(cached)); } catch { return false; } }
+  hideSplash(); setReadonly(true);
+  return true;
+}
+let reconnecting = false;
+async function tryReconnect(manual) {
+  if (reconnecting) return;
+  reconnecting = true;
+  if (manual) $('roRetry').textContent = 'Đang thử…';
+  try {
+    let c = null;
+    if (REMOTE) { await readAlive(); c = await readState(2 * 60000); if (!c && manual) c = await apiCall('GET', '/api/config'); }
+    else c = await apiCall('GET', '/api/config');
+    if (c && c.version) {
+      store(CONFIG_CACHE_STORE, JSON.stringify(c)); applyConfig(c); setReadonly(false); hideSplash();
+      if (REMOTE) { showConn(c.publishedAt || Date.now()); startAutoRefresh(); }
+      else setConn('on', `${(c.tvName || 'Tivi').replace(/ \(.*\)$/, '')} · cùng wifi`);
+      toast('Đã kết nối lại tivi');
+    } else if (manual) toast('Tivi vẫn chưa trả lời', true);
+  } catch (e) { if (manual) toast('Tivi vẫn chưa trả lời', true); }
+  finally { reconnecting = false; $('roRetry').textContent = 'Thử lại'; }
+}
+$('roRetry').addEventListener('click', () => tryReconnect(true));
+
 // Màn chờ: ẩn khi đã có số liệu từ tivi; lỗi thì cho thử lại hoặc xem bản lưu lần trước.
 function hideSplash() { $('splash').classList.add('hide'); }
 function splashError(msg) {
   const sp = $('splash');
+  if (enterReadonly()) return;
   if (sp.classList.contains('hide')) return;
   sp.classList.add('err');
   $('splashText').textContent = msg;
@@ -1588,7 +1645,7 @@ $('splashRetry').addEventListener('click', () => location.reload());
 })();
 $('splashSkip').addEventListener('click', hideSplash);
 // Lâu quá (mạng chậm, tivi tắt): cho thoát màn chờ.
-setTimeout(() => { if (!$('splash').classList.contains('hide')) { $('splashActions').hidden = false;
+setTimeout(() => { if (!$('splash').classList.contains('hide') && !enterReadonly()) { $('splashActions').hidden = false;
   $('splashRetry').style.display = 'none'; $('splashSkip').style.display = store(CONFIG_CACHE_STORE) ? '' : 'none'; } }, 15000);
 
 function updateGuardMode() {
@@ -1952,7 +2009,7 @@ $('remoteState').addEventListener('click', async () => {
   setConn('', 'Đang hỏi tivi…');
   try {
     const c = await api('GET', '/api/config');
-    cfg = c; store(CONFIG_CACHE_STORE, JSON.stringify(c)); applyConfig(c);
+    cfg = c; store(CONFIG_CACHE_STORE, JSON.stringify(c)); applyConfig(c); setReadonly(false);
     aliveAt = Date.now(); showConn(Date.now()); toast('Đã cập nhật từ tivi');
   } catch (e) { await readAlive(); showConn(cfg.publishedAt); toast(e.message, true); }
 });
@@ -2063,10 +2120,14 @@ async function start() {
     await readAlive();
     let c = await readState(10 * 60000);
     const viaState = !!c;
-    if (!c) { setConn('', 'Đang hỏi tivi…'); c = await api('GET', '/api/config'); }
+    if (!c) {
+      if (cached && Date.now() - aliveAt > 4 * 60000) enterReadonly();
+      setConn('', 'Đang hỏi tivi…'); c = await api('GET', '/api/config');
+    }
     store(CONFIG_CACHE_STORE, JSON.stringify(c));
     applyConfig(c);
     showConn(viaState ? c.publishedAt : Date.now());
+    setReadonly(false);
     hideSplash();
     startAutoRefresh();
     handleApproveFromQr();
