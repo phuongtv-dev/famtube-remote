@@ -682,7 +682,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127195615';
+const PAGE_BUILD = '20261127200113';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -846,7 +846,11 @@ function updateSaveBar() {
 }
 // "Có thay đổi" = bản nháp khác bản trên tivi (bấm lại đúng lựa chọn cũ, chuyển tab... không tính).
 // Danh sách id (nhóm của profile, kênh của nhóm) so không kể thứ tự.
-const norm = (x) => JSON.stringify(x, (k, v) => Array.isArray(v) && v.every((e) => typeof e !== 'object') ? [...v].sort() : v);
+const norm = (x) => JSON.stringify(x, (k, v) => {
+  if (Array.isArray(v)) return v.every((e) => typeof e !== 'object') ? [...v].sort() : v;
+  if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().map((key) => [key, v[key]]));
+  return v;
+});
 const sameAs = (a, b) => norm(a) === norm(b);
 function setDirty(v) { dirty = v && !sameAs(groups, cfg.groups); updateSaveBar(); }
 
@@ -922,7 +926,7 @@ function render() {
 
   renderRemote();
   renderBlocked();
-  if (!extrasDirty) loadExtras();
+  if (!extrasDirty) loadExtras(); else setExtrasDirty();
   $('ver').textContent = cfg.version ? `${cfg.tvName ? cfg.tvName + ' · ' : ''}FamTube ${cfg.version} · bản dựng ${cfg.build}` : '';
   $('minDur').value = String(cfg.minDurationSec);
   if (!$('minDur').value) $('minDur').value = '180';
@@ -1445,7 +1449,7 @@ const KW_SUGGEST = ['GTA', 'kinh dị', 'creepy', 'horror', 'quỷ', 'ma ám', '
 const DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 const fold = (t) => t.toLowerCase().replace(/đ/g, 'd').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 function setExtrasDirty() {
-  extrasDirty = !sameAs(extras, cfg.extras || {});
+  extrasDirty = !sameAs(extras, extrasShape(cfg.extras));
   updateSaveBar();
 }
 function renderExtras() {
@@ -1475,11 +1479,14 @@ function renderExtras() {
   $('repAt').value = e.reportAt || '20:30';
   $('repAt').disabled = !e.reportAt;
 }
-function loadExtras() {
-  const e = cfg.extras || {};
-  extras = { keywords: [...(e.keywords || [])], schedules: (e.schedules || []).map((x) => ({ ...x, days: [...x.days], groupIds: [...x.groupIds] })),
+function extrasShape(e) {
+  e = e || {};
+  return { keywords: [...(e.keywords || [])], schedules: (e.schedules || []).map((x) => ({ ...x, days: [...x.days], groupIds: [...x.groupIds] })),
     allowlistOnly: !!e.allowlistOnly, breakEveryMin: e.breakEveryMin || 0, breakMin: e.breakMin || 5,
     trackedApps: [...(e.trackedApps || [])], askWhoWatches: e.askWhoWatches !== false, reportAt: e.reportAt ?? '20:30' };
+}
+function loadExtras() {
+  extras = extrasShape(cfg.extras);
   extrasDirty = false; updateSaveBar();
   renderExtras();
 }
@@ -1535,7 +1542,7 @@ $('repNow').addEventListener('click', async () => {
 });
 $('saveExtras').addEventListener('click', async () => {
   if (extras.schedules.some((x) => !x.start || !x.end || !x.days.length)) return toast('Lịch cần có ngày và giờ bắt đầu, kết thúc', true);
-  try { await api('PUT', '/api/extras', extras); toast('Đã lưu luật lên tivi'); await load(); }
+  try { await api('PUT', '/api/extras', extras); extrasDirty = false; toast('Đã lưu luật lên tivi'); await load(); }
   catch (e) { toast(e.message, true); }
 });
 
@@ -2084,10 +2091,14 @@ start();
     if (t === 'auto') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', t);
     btn.textContent = ICON[t];
-    if (announce && typeof toast === 'function') toast('Giao diện: ' + NAME[t]);
+    if (announce && typeof toast === 'function') toast('Giao diện: ' + (t === 'auto' ? (sysDark() ? 'Tối' : 'Sáng') + ' (theo máy)' : NAME[t]));
   };
+  // Bấm là đổi sang giao diện ngược với đang thấy; trùng với giao diện của máy thì về "Tự động".
+  const sysDark = () => window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
   btn.addEventListener('click', () => {
-    t = t === 'auto' ? 'dark' : t === 'dark' ? 'light' : 'auto';
+    const showingDark = t === 'dark' || (t === 'auto' && sysDark());
+    const want = showingDark ? 'light' : 'dark';
+    t = (want === 'dark') === sysDark() ? 'auto' : want;
     try { localStorage.setItem('ft_theme', t); } catch (e) {}
     apply(true);
   });
