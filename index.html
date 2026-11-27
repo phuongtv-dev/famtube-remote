@@ -315,6 +315,37 @@
   .stat .ico { width:40px; height:40px; border-radius:12px; display:grid; place-items:center; font-size:20px; background:var(--accent-soft); flex-shrink:0; }
 
   /* ---------- Nội dung ---------- */
+  .search-box { display:flex; align-items:center; gap:8px; padding:4px 4px 4px 14px; border-radius:14px; background:var(--field); border:1px solid var(--field-border); }
+  .search-box:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .search-box input { border:0 !important; background:transparent !important; box-shadow:none !important; height:42px; padding:0; }
+  .search-box .sb-ico { font-size:20px; color:var(--muted); line-height:1; }
+  .search-box button { height:40px; flex-shrink:0; }
+  .search-box.slim { padding:0 14px; }
+  .seg-n { font-size:12px; font-weight:600; opacity:.7; margin-left:2px; }
+  .grp-card { padding:0 !important; }
+  .grp-top { width:100%; height:auto; padding:12px 14px; background:none !important; border:0; border-radius:var(--radius); justify-content:flex-start;
+             gap:12px; color:var(--ink); text-align:left; font-weight:400; white-space:normal; }
+  .grp-top:active { transform:none; }
+  .grp-top .name { font-weight:700; font-size:16px; }
+  .grp-top .sub { margin-top:2px; }
+  .grp-card.open .grp-top .chev { transform:rotate(225deg) translate(-2px,-2px); }
+  .chev { width:9px; height:9px; margin-left:auto; flex-shrink:0; border-right:2px solid var(--muted); border-bottom:2px solid var(--muted);
+          transform:rotate(45deg) translate(-2px,-2px); transition:transform .2s; }
+  .thumbs { display:flex; flex-shrink:0; min-width:64px; padding-right:2px; }
+  .thumbs img, .thumbs .ph { width:30px; height:30px; border-radius:50%; object-fit:cover; border:2px solid var(--card); background:var(--ph); flex-shrink:0; }
+  .thumbs > * + * { margin-left:-12px; }
+  .thumbs .more { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-size:10.5px; font-weight:700;
+                  background:var(--soft2); color:var(--muted); border:2px solid var(--card); margin-left:-12px; }
+  .grp-body { display:none; padding:12px 14px 14px; border-top:1px solid var(--line); flex-direction:column; gap:12px; }
+  .grp-card.open .grp-body { display:flex; }
+  .tag { display:inline-block; font-size:11px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--soft2); color:var(--muted); margin-left:4px; vertical-align:1px; }
+  .tag.warn { background:var(--warm-soft); color:var(--danger); }
+  .ch-pick { max-height:340px; overflow:auto; margin:0 -4px; padding:0 4px; }
+  .ch-pick label { padding:8px 2px; }
+  .ch-pick img, .ch-pick .ph { width:30px; height:30px; border-radius:50%; object-fit:cover; background:var(--ph); flex-shrink:0; }
+  .mini { display:inline-block; font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:999px; background:var(--accent-soft); color:var(--accent); margin:3px 4px 0 0; }
+  .mini.none { background:var(--soft); color:var(--muted); }
+  #chGroupFilter button[aria-pressed=true] { background:var(--inv-bg); color:var(--inv-ink); border-color:transparent; }
   .group-head { display:flex; gap:6px; align-items:center; }
   .group-head input { height:42px; font-weight:600; }
   .ch { display:flex; gap:12px; align-items:center; padding:10px 0; }
@@ -425,13 +456,18 @@
 <!-- ===================== NỘI DUNG ===================== -->
 <section class="tab" id="tab-content" data-title="Nội dung">
   <div class="card stack" style="margin-top:8px">
-    <div class="card-title">Thêm kênh</div>
-    <input id="addInput" type="text" placeholder="Link kênh, @tênkênh, hoặc từ khóa để tìm" autocomplete="off" autocapitalize="off">
-    <div class="row">
-      <select id="addGroup" class="grow" aria-label="Thêm vào nhóm"></select>
-      <button id="addBtn" class="primary">Thêm</button>
+    <div class="search-box">
+      <span class="sb-ico">⌕</span>
+      <input id="addInput" type="text" placeholder="Tìm kênh, hoặc dán link / @tên kênh" autocomplete="off" autocapitalize="off" enterkeyhint="search">
+      <button id="addBtn" class="primary">Tìm</button>
     </div>
-    <div class="item" style="padding:0">
+    <div class="row" style="gap:10px">
+      <label class="field grow" style="flex-direction:row; align-items:center; gap:8px">
+        <span style="white-space:nowrap">Thêm vào</span>
+        <select id="addGroup" class="grow" aria-label="Thêm vào nhóm"></select>
+      </label>
+    </div>
+    <div class="item" style="padding:0; min-height:0">
       <div class="label">Tìm an toàn<div class="sub" id="searchInfo">Ẩn nội dung người lớn khi tìm</div></div>
       <input type="checkbox" class="switch" id="safeSearch">
     </div>
@@ -439,14 +475,17 @@
   </div>
 
   <div class="seg" role="tablist" style="margin:18px 0 12px" id="contentSeg">
-    <button aria-pressed="true" data-seg="groups">Nhóm</button>
-    <button aria-pressed="false" data-seg="channels">Kênh</button>
+    <button aria-pressed="true" data-seg="groups">Nhóm <span class="seg-n" id="segGroupsN"></span></button>
+    <button aria-pressed="false" data-seg="channels">Kênh <span class="seg-n" id="segChannelsN"></span></button>
   </div>
   <div id="seg-groups">
+    <div class="note" style="margin:0 4px 10px">Mỗi nhóm là một hàng trên tivi. Con chỉ thấy các nhóm được chọn trong tab Profile.</div>
     <div id="groups"></div>
     <button id="newGroup" class="dashed">+ Nhóm mới</button>
   </div>
   <div id="seg-channels" style="display:none">
+    <div class="search-box slim"><span class="sb-ico">⌕</span><input id="chFilter" type="text" placeholder="Lọc theo tên kênh" autocomplete="off"></div>
+    <div class="chips" id="chGroupFilter" style="margin:10px 0"></div>
     <div class="card" id="channels"></div>
   </div>
 </section>
@@ -696,7 +735,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127203616';
+const PAGE_BUILD = '20261127203933';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -962,37 +1001,10 @@ function render() {
   $('addGroup').innerHTML = '<option value="">Không thêm vào nhóm</option>' +
     cfg.groups.map((g) => `<option value="${g.id}">Thêm vào nhóm “${esc(g.name)}”</option>`).join('');
 
-  // Nhóm
-  const nameOf = Object.fromEntries(cfg.channels.map((c) => [c.id, c.title]));
-  $('groups').innerHTML = groups.length ? groups.map((g, i) => `
-    <div class="card" data-i="${i}">
-      <div class="group-head">
-        <input type="text" value="${esc(g.name)}" data-act="name" aria-label="Tên nhóm">
-        <button class="icon" data-act="up" ${i === 0 ? 'disabled' : ''} aria-label="Lên">↑</button>
-        <button class="icon" data-act="down" ${i === groups.length - 1 ? 'disabled' : ''} aria-label="Xuống">↓</button>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <button class="pill" data-act="hidden" aria-pressed="${g.hidden}">Ẩn khỏi tivi</button>
-        <button class="pill lock" data-act="locked" aria-pressed="${g.locked}">Cần PIN</button>
-        <span class="grow"></span>
-        <button class="pill" data-act="del">Xóa</button>
-      </div>
-      <details>
-        <summary>${g.channelIds.length} kênh trong nhóm</summary>
-        <div class="checks">${cfg.channels.length ? cfg.channels.map((c) => `
-          <label><input type="checkbox" data-act="ch" value="${esc(c.id)}" ${g.channelIds.includes(c.id) ? 'checked' : ''}>${esc(c.title)}</label>`).join('')
-          : '<div class="empty">Chưa có kênh nào</div>'}</div>
-      </details>
-    </div>`).join('') : '<div class="card empty">Chưa có nhóm nào</div>';
-
-  // Kênh
-  $('channels').innerHTML = cfg.channels.length ? cfg.channels.map((c) => `
-    <div class="ch">
-      ${c.thumbnailUrl ? `<img src="${esc(c.thumbnailUrl)}" alt="">` : '<div class="ph"></div>'}
-      <div class="grow"><div class="name">${esc(c.title)}</div>
-        <div class="sub">${esc(cfg.groups.filter((g) => g.channelIds.includes(c.id)).map((g) => g.name).join(', ') || 'Chưa thuộc nhóm nào')}</div></div>
-      <button class="icon" data-del="${esc(c.id)}" data-name="${esc(c.title)}" aria-label="Xóa kênh">✕</button>
-    </div>`).join('') : '<div class="empty">Chưa có kênh nào. Thêm kênh ở trên.</div>';
+  renderGroups();
+  renderChannels();
+  $('segGroupsN').textContent = groups.length;
+  $('segChannelsN').textContent = cfg.channels.length;
 
   renderRemote();
   renderBlocked();
@@ -1003,6 +1015,78 @@ function render() {
   $('safeSearch').checked = cfg.safeSearch !== false;
   renderGuard();
   $('pinState').textContent = cfg.hasPin ? 'Đã đặt · nhập mã mới để đổi' : 'Chưa đặt · nên đặt để con không tự mở khóa';
+}
+
+// ---------- Nội dung: nhóm (thu gọn, mở ra mới sửa) và kênh (lọc theo tên / nhóm) ----------
+const grpOpen = new Set();   // khóa nhóm đang mở: id, nhóm mới chưa lưu thì luôn mở
+const grpKey = (g, i) => g.id ? String(g.id) : 'new' + i;
+const chById = () => Object.fromEntries(cfg.channels.map((c) => [c.id, c]));
+const thumbHtml = (c) => c && c.thumbnailUrl ? `<img src="${esc(c.thumbnailUrl)}" alt="" loading="lazy">` : '<div class="ph"></div>';
+function viewersOf(g) {
+  const kids = (cfg.profiles || []).filter((p) => p.kind === 'kid' && g.id && p.groupIds.includes(g.id)).map((p) => p.name);
+  return kids.length ? kids.join(', ') + ' xem' : 'Chỉ người lớn';
+}
+function renderGroups() {
+  const byId = chById();
+  $('groups').innerHTML = groups.length ? groups.map((g, i) => {
+    const open = !g.id || grpOpen.has(grpKey(g, i));
+    const chs = g.channelIds.map((id) => byId[id]).filter(Boolean);
+    const thumbs = chs.slice(0, 3).map(thumbHtml).join('') + (chs.length > 3 ? `<div class="more">+${chs.length - 3}</div>` : '');
+    // Kênh đã chọn lên đầu, rồi theo tên
+    const all = [...cfg.channels].sort((x, y) => (g.channelIds.includes(y.id) - g.channelIds.includes(x.id)) || x.title.localeCompare(y.title, 'vi'));
+    return `
+    <div class="card grp-card${open ? ' open' : ''}" data-i="${i}">
+      <button class="grp-top" data-act="toggle" aria-expanded="${open}">
+        <div class="thumbs">${thumbs || '<div class="ph"></div>'}</div>
+        <div class="grow" style="min-width:0">
+          <div class="name">${esc(g.name || 'Chưa đặt tên')}${g.hidden ? '<span class="tag">Ẩn</span>' : ''}${g.locked ? '<span class="tag warn">PIN</span>' : ''}</div>
+          <div class="sub"><span class="grp-count">${g.channelIds.length}</span> kênh · ${esc(viewersOf(g))}</div>
+        </div>
+        <span class="chev"></span>
+      </button>
+      <div class="grp-body">
+        <div class="group-head">
+          <input type="text" value="${esc(g.name)}" data-act="name" aria-label="Tên nhóm">
+          <button class="icon" data-act="up" ${i === 0 ? 'disabled' : ''} aria-label="Lên">↑</button>
+          <button class="icon" data-act="down" ${i === groups.length - 1 ? 'disabled' : ''} aria-label="Xuống">↓</button>
+        </div>
+        <div class="row" style="flex-wrap:wrap">
+          <button class="pill" data-act="hidden" aria-pressed="${g.hidden}">Ẩn khỏi tivi</button>
+          <button class="pill lock" data-act="locked" aria-pressed="${g.locked}">Cần PIN</button>
+          <span class="grow"></span>
+          <button class="pill" data-act="del" style="color:var(--danger)">Xóa nhóm</button>
+        </div>
+        <div class="search-box slim"><span class="sb-ico">⌕</span><input type="text" data-act="chfilter" placeholder="Lọc kênh để chọn" autocomplete="off"></div>
+        <div class="checks ch-pick">${all.length ? all.map((c) => `
+          <label data-name="${esc(fold(c.title))}"><input type="checkbox" data-act="ch" value="${esc(c.id)}" ${g.channelIds.includes(c.id) ? 'checked' : ''}>${thumbHtml(c)}<span class="grow">${esc(c.title)}</span></label>`).join('')
+          : '<div class="empty">Chưa có kênh nào. Thêm kênh ở trên.</div>'}</div>
+      </div>
+    </div>`;
+  }).join('') : '<div class="card empty">Chưa có nhóm nào</div>';
+}
+
+let chGroup = 'all';   // lọc danh sách kênh: 'all' | 'none' | id nhóm
+function renderChannels() {
+  const q = fold($('chFilter').value.trim());
+  const groupsOf = (id) => cfg.groups.filter((g) => g.channelIds.includes(id));
+  $('chGroupFilter').innerHTML = [['all', 'Tất cả'], ...cfg.groups.map((g) => [String(g.id), g.name]), ['none', 'Chưa có nhóm']]
+    .map(([k, n]) => `<button data-g="${esc(k)}" aria-pressed="${chGroup === k}">${esc(n)}</button>`).join('');
+  const list = cfg.channels.filter((c) => {
+    if (q && !fold(c.title).includes(q)) return false;
+    const gs = groupsOf(c.id);
+    if (chGroup === 'none') return !gs.length;
+    if (chGroup !== 'all') return gs.some((g) => String(g.id) === chGroup);
+    return true;
+  }).sort((x, y) => x.title.localeCompare(y.title, 'vi'));
+  $('channels').innerHTML = list.length ? list.map((c) => {
+    const gs = groupsOf(c.id);
+    return `<div class="ch">
+      ${thumbHtml(c)}
+      <div class="grow" style="min-width:0"><div class="name">${esc(c.title)}</div>
+        <div>${gs.length ? gs.map((g) => `<span class="mini">${esc(g.name)}</span>`).join('') : '<span class="mini none">Chưa thuộc nhóm nào · chỉ người lớn thấy</span>'}</div></div>
+      <button class="icon" data-del="${esc(c.id)}" data-name="${esc(c.title)}" aria-label="Xóa kênh">✕</button>
+    </div>`;
+  }).join('') : `<div class="empty">${cfg.channels.length ? 'Không có kênh nào khớp.' : 'Chưa có kênh nào. Thêm kênh ở trên.'}</div>`;
 }
 
 function fmtSubs(n) {
@@ -1043,6 +1127,12 @@ $('groups').addEventListener('click', (e) => {
   if (!btn) return;
   const i = Number(btn.closest('[data-i]').dataset.i);
   const act = btn.dataset.act;
+  if (act === 'toggle') {
+    const k = grpKey(groups[i], i);
+    if (!groups[i].id) return;
+    if (grpOpen.has(k)) grpOpen.delete(k); else grpOpen.add(k);
+    return renderGroups();
+  }
   if (act === 'up' && i > 0) [groups[i - 1], groups[i]] = [groups[i], groups[i - 1]];
   else if (act === 'down' && i < groups.length - 1) [groups[i + 1], groups[i]] = [groups[i], groups[i + 1]];
   else if (act === 'hidden' || act === 'locked') groups[i][act] = !groups[i][act];
@@ -1051,6 +1141,11 @@ $('groups').addEventListener('click', (e) => {
   setDirty(true); render();
 });
 $('groups').addEventListener('input', (e) => {
+  if (e.target.dataset.act === 'chfilter') {
+    const q = fold(e.target.value.trim());
+    e.target.closest('.grp-body').querySelectorAll('.ch-pick label').forEach((l) => { l.style.display = !q || l.dataset.name.includes(q) ? '' : 'none'; });
+    return;
+  }
   if (e.target.dataset.act !== 'name') return;
   groups[Number(e.target.closest('[data-i]').dataset.i)].name = e.target.value;
   setDirty(true);
@@ -1060,7 +1155,7 @@ $('groups').addEventListener('change', (e) => {
   const g = groups[Number(e.target.closest('[data-i]').dataset.i)];
   const id = e.target.value;
   g.channelIds = e.target.checked ? [...new Set([...g.channelIds, id])] : g.channelIds.filter((x) => x !== id);
-  e.target.closest('details').querySelector('summary').textContent = `${g.channelIds.length} kênh trong nhóm`;
+  e.target.closest('.grp-card').querySelector('.grp-count').textContent = g.channelIds.length;
   setDirty(true);
 });
 $('newGroup').addEventListener('click', () => {
@@ -1767,6 +1862,15 @@ $('safeSearch').addEventListener('change', async () => {
   try { await api('PUT', '/api/settings', { safeSearch: on }); cfg.safeSearch = on; toast(on ? 'Đã bật Tìm an toàn' : 'Đã tắt Tìm an toàn'); }
   catch (e) { toast(e.message, true); $('safeSearch').checked = !on; }
 });
+$('chFilter').addEventListener('input', renderChannels);
+$('chGroupFilter').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-g]');
+  if (!b) return;
+  chGroup = b.dataset.g; renderChannels();
+});
+// Nút: dán link / @tên thì "Thêm", gõ từ khóa thì "Tìm"
+$('addInput').addEventListener('input', () => { $('addBtn').textContent = looksDirect($('addInput').value.trim()) ? 'Thêm' : 'Tìm'; });
+$('addInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('addBtn').click(); });
 $('channels').addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-del]');
   if (!btn) return;
