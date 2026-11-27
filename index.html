@@ -696,7 +696,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127201227';
+const PAGE_BUILD = '20261127201806';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -1113,6 +1113,26 @@ function setHTML(el, html) {
   el.querySelectorAll('details').forEach((d, k) => { if (opened[k]) d.open = true; });
   if (focusId) document.getElementById(focusId)?.focus();
 }
+// Ảnh trang online: "gh:media/<tên>" = file ảnh trong repo hộp thư (tivi đưa lên một lần).
+// Tải một lần qua GitHub rồi giữ trong máy; chưa có thì tạm hiện chữ cái đầu, tải xong vẽ lại.
+const mediaCache = {}, mediaLoading = {};
+function mediaSrc(url) {
+  if (!url || !String(url).startsWith('gh:')) return url || '';
+  const path = url.slice(3);
+  if (mediaCache[path]) return mediaCache[path];
+  const saved = store('m:' + path);
+  if (saved) return (mediaCache[path] = saved);
+  if (REMOTE && !mediaLoading[path]) {
+    mediaLoading[path] = true;
+    gh('GET', 'contents/' + path).then((f) => {
+      if (!f || !f.content) return;
+      mediaCache[path] = `data:image/${path.endsWith('.png') ? 'png' : 'jpeg'};base64,` + f.content.replace(/\s/g, '');
+      store('m:' + path, mediaCache[path]);
+      renderToday(); renderProfiles();
+    }).catch(() => {});
+  }
+  return '';
+}
 function fmtMin(m) { return m >= 60 ? `${Math.floor(m / 60)} giờ${m % 60 ? ' ' + (m % 60) + ' phút' : ''}` : `${m} phút`; }
 function renderApproval() {
   const a = cfg.approval;
@@ -1215,7 +1235,8 @@ function renderToday() {
       it.limit <= 0 ? '<span class="badge">Không giới hạn</span>'
       : over ? '<span class="badge warn">Hết giờ hôm nay</span>'
       : `<span class="badge">Còn ${fmtMin(left)}</span>`);
-    const inner = it.avatarUrl ? `<img src="${esc(it.avatarUrl)}" alt="">` : esc(it.icon || (it.name || '?').trim().charAt(0).toUpperCase());
+    const src = mediaSrc(it.avatarUrl);
+    const inner = src ? `<img src="${esc(src)}" alt="">` : esc(it.icon || (it.name || '?').trim().charAt(0).toUpperCase());
     const win = it.start && it.end ? ` · xem từ ${esc(it.start)} đến ${esc(it.end)}` : '';
     return `<div class="card" data-bucket="${it.id}">
       <div class="kid">
@@ -1720,7 +1741,8 @@ let profilesDirty = false;
 function setProfilesDirty(v) { profilesDirty = v && !sameAs(profiles, cfg.profiles || []); updateSaveBar(); }
 
 function avatarHtml(p) {
-  return `<div class="avatar" style="background:${esc(p.color)}">${p.avatarUrl ? `<img src="${esc(p.avatarUrl)}" alt="">` : esc((p.name || '?').trim().charAt(0).toUpperCase() || '?')}</div>`;
+  const src = mediaSrc(p.avatarUrl);
+  return `<div class="avatar" style="background:${esc(p.color)}">${src ? `<img src="${esc(src)}" alt="">` : esc((p.name || '?').trim().charAt(0).toUpperCase() || '?')}</div>`;
 }
 
 const pfOpen = new Set();   // id profile đang mở (profile mới chưa lưu luôn mở)
