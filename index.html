@@ -773,7 +773,7 @@
 const token = new URLSearchParams(location.search).get('t') || '';
 // Trang online: bản dựng của trang (tools/publish-remote.sh thay chuỗi này). Có bản mới thì tự tải lại,
 // vì GitHub Pages cho trình duyệt / app trên màn hình chính giữ bản cũ tới 10 phút.
-const PAGE_BUILD = '20261127223957';
+const PAGE_BUILD = '20261128174207';
 async function checkPageUpdate() {
   if (PAGE_BUILD.startsWith('__')) return;
   try {
@@ -1504,10 +1504,28 @@ const inFamTube = (name) => !!name && (cfg.channels || []).some((c) => fold(c.ti
 function chActions(name, compact, short) {
   if (!name) return '';
   const added = inFamTube(name), blocked = isBlocked(name);
-  if (short && added) return '';   // thống kê: kênh đã có trong FamTube thì không cần nút
+  // Kênh đã có trong FamTube vẫn cho chặn (vd. không muốn con xem kênh đó trên YouTube nữa)
   return `<div class="ch-act${compact ? ' compact' : ''}" data-ch-name="${esc(name)}">
-    ${added ? '<span class="mini">✓ Có trong FamTube</span>' : blocked ? '' : `<button class="pill add" data-chact="add">＋ ${short ? 'Thêm' : 'Thêm vào FamTube'}</button>`}
-    ${blocked ? '<span class="mini none" style="color:var(--danger)">⛔ Đã chặn</span>' : added ? '' : `<button class="pill blk" data-chact="block">⛔ ${short ? 'Chặn' : 'Chặn kênh'}</button>`}
+    ${added ? '<span class="mini">✓ Trong FamTube</span>' : blocked ? '' : `<button class="pill add" data-chact="add">＋ ${short ? 'Thêm' : 'Thêm vào FamTube'}</button>`}
+    ${blocked ? '<span class="mini none" style="color:var(--danger)">⛔ Đã chặn</span>' : `<button class="pill blk" data-chact="block">⛔ ${short ? 'Chặn' : 'Chặn kênh'}</button>`}
+  </div>`;
+}
+// Hẹn giờ khóa / tắt tivi: đang hẹn thì hiện giờ + hủy; chưa thì chọn kiểu + số phút.
+let timerMode = 'lock';
+function timerHtml(tv) {
+  const t = tv.timer;
+  if (t && t.at > Date.now()) {
+    const left = Math.max(1, Math.ceil((t.at - Date.now()) / 60000));
+    return `<div class="locked-banner" style="background:var(--accent-soft); color:var(--ink)">⏱<span class="grow">Tivi sẽ <b>${t.mode === 'sleep' ? 'tắt' : 'khóa'}</b> lúc ${fmtClock(t.at)} · còn ${left} phút</span>
+      <button data-tv="timerCancel" style="height:34px">Hủy</button></div>`;
+  }
+  return `<div>
+    <div class="field" style="margin-bottom:6px">Hẹn giờ <span class="note">giờ xem vẫn đếm bình thường, tivi báo trước cho con</span></div>
+    <div class="seg" style="margin-bottom:8px">
+      <button data-tv="timerMode" data-mode="lock" aria-pressed="${timerMode === 'lock'}">🔒 Khóa tivi</button>
+      <button data-tv="timerMode" data-mode="sleep" aria-pressed="${timerMode === 'sleep'}">⏻ Tắt tivi</button>
+    </div>
+    <div class="chips">${[5, 10, 15, 30, 60].map((m) => `<button data-tv="timer" data-min="${m}">⏱ ${m < 60 ? m + ' phút' : '1 giờ'}</button>`).join('')}</div>
   </div>`;
 }
 function renderTv() {
@@ -1556,6 +1574,7 @@ function renderTv() {
       <div class="row"><input type="text" id="tvMsg" class="grow" maxlength="120" placeholder="Khoa ơi, …" autocomplete="off"><button class="primary" data-tv="send">Gửi</button></div>
       <div class="chips" style="margin-top:8px">${MSG_PRESETS.map((m) => `<button data-tv="preset" data-text="${esc(m)}">${esc(m)}</button>`).join('')}</div>
     </div>
+    ${locked ? '' : timerHtml(tv)}
     ${locked ? '' : `<div>
       <div class="field" style="margin-bottom:6px">Khóa tivi ngay</div>
       <div class="chips">${[15, 30, 60, 120].map((m) => `<button data-tv="lock" data-min="${m}">🔒 ${m < 60 ? m + ' phút' : m / 60 + ' giờ'}</button>`).join('')}</div>
@@ -1646,6 +1665,13 @@ $('tvCard').addEventListener('click', async (e) => {
       if (!confirm(`Khóa tivi ${b.textContent.replace('🔒', '').trim()}? Mọi app sẽ bị chặn, chỉ mở được bằng PIN hoặc từ đây.`)) return;
       return tvCommand({ action: 'lock', minutes: Number(b.dataset.min) });
     case 'unlock': return tvCommand({ action: 'lock', minutes: 0 });
+    case 'timerMode': timerMode = b.dataset.mode; return renderTv();
+    case 'timer': {
+      const m = Number(b.dataset.min);
+      if (!confirm(`${timerMode === 'sleep' ? 'Tắt' : 'Khóa'} tivi sau ${m} phút? Tivi sẽ báo ngay cho con.`)) return;
+      return tvCommand({ action: 'timer', mode: timerMode, minutes: m });
+    }
+    case 'timerCancel': return tvCommand({ action: 'timer', mode: 'lock', minutes: 0 });
   }
 });
 
